@@ -208,7 +208,7 @@ section p.desc {
 .crypto-tbl td:nth-child(2) { color: var(--text); padding-right: 1.5rem; }
 .crypto-tbl td:last-child { color: var(--dim); }
 
-/* ---- ARCH ---- */
+/* ---- ARCH / DIAGRAMS ---- */
 .arch-pre {
   font-family: var(--mono);
   font-size: 0.78rem;
@@ -299,18 +299,6 @@ section p.desc {
 .doc-list .doc-title a { color: var(--bright); text-decoration: none; }
 .doc-list .doc-title a:hover { color: var(--amber); }
 .doc-list .doc-desc { color: var(--dim); font-size: 0.85rem; text-align: right; }
-
-/* ---- KEY HIERARCHY DIAGRAM ---- */
-.kh-diagram {
-  font-family: var(--mono); font-size: 0.78rem; line-height: 1.6;
-  color: var(--dim);
-  margin: 1.5rem 0;
-  white-space: pre;
-  overflow-x: auto;
-}
-.kh-diagram .am { color: var(--amber); }
-.kh-diagram .gn { color: var(--green); }
-.kh-diagram .br { color: var(--bright); }
 
 /* ---- FOOTER ---- */
 footer {
@@ -521,22 +509,25 @@ footer a:hover { color: var(--amber); }
     </tbody>
   </table>
 
-  <div class="kh-diagram">
-    <span class="am">Password</span> + Salt
-         |
-    <span class="am">Argon2id</span> (64 MB, t=3, p=4)
-         |
-     <span class="br">K_root</span> ---- 256-bit master key
-         |
-    <span class="am">HKDF-SHA256</span> with domain separation
-     ____|________________________________________
-    |        |         |         |        |        |
-  <span class="gn">K_data</span>   <span class="gn">K_meta</span>   <span class="gn">K_schema</span>  <span class="gn">K_ih</span>    <span class="gn">K_wrap</span>   <span class="gn">K_deadman</span>
-  encrypts encrypts  derives   integrity sharing  audit
-  files    inodes    table     hashing   key wrap logging
-                     names</div>
+  <div style="margin-top:2.5rem;">
+    <div class="label" style="font-family:var(--mono);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim);margin-bottom:0.75rem;">Key hierarchy</div>
+  </div>
 
-  <p style="color:var(--dim);font-size:0.88rem;max-width:600px;margin-top:1rem;">
+  <div class="arch-pre">                    Password + Salt
+                          |
+                    <span class="am">Argon2id</span> (64 MB, t=3, p=4)
+                          |
+                      <span class="hi">K_root</span>  256-bit master key
+                          |
+                    <span class="am">HKDF-SHA256</span>  with domain separation
+        __________________|__________________________________________
+        |          |           |          |          |               |
+     <span class="gn">K_data</span>     <span class="gn">K_meta</span>     <span class="gn">K_schema</span>     <span class="gn">K_ih</span>      <span class="gn">K_wrap</span>       <span class="gn">K_deadman</span>
+    encrypts  encrypts    derives   integrity   sharing        audit
+      files    inodes      table     hashing    key wrap      logging
+                           names</div>
+
+  <p style="color:var(--dim);font-size:0.88rem;max-width:600px;margin-top:1.5rem;">
     Every ciphertext is bound to its context through Additional Authenticated
     Data. A block encrypted for inode 42 at offset 0 cannot be moved to
     inode 43 or offset 1024 -- the Poly1305 tag will reject it. This kills
@@ -789,7 +780,7 @@ footer a:hover { color: var(--amber); }
 <div class="wrap"><hr></div>
 <footer>
 <div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
-  <span>MIT License. <a href="https://github.com/hedonistic-io/tgcryptfs">Source on GitHub.</a></span>
+  <span>&copy; 2026 Hedonistic, LLC. MIT License. <a href="https://github.com/hedonistic-io/tgcryptfs">Source on GitHub.</a></span>
   <span>
     <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CONTRIBUTING.md">Contribute</a> &nbsp;
     <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SECURITY.md">Security</a> &nbsp;
