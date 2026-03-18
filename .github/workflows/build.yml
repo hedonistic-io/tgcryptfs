@@ -1,0 +1,192 @@
+name: Build TGCryptFS
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_os:
+        description: "Target operating system"
+        required: true
+        type: choice
+        options:
+          - linux-x86_64
+          - linux-aarch64
+          - macos-x86_64
+          - macos-aarch64
+      embed_credentials:
+        description: "Bake Telegram API credentials into the binary (uses repo secrets TG_API_ID and TG_API_HASH)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build for ${{ inputs.target_os }}
+    runs-on: ${{ contains(inputs.target_os, 'macos') && 'macos-latest' || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ contains(inputs.target_os, 'aarch64') && contains(inputs.target_os, 'linux') && 'aarch64-unknown-linux-gnu' || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install FUSE (Linux)
+        if: contains(inputs.target_os, 'linux')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse-dev
+          if [ "${{ inputs.target_os }}" = "linux-aarch64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
+
+      - name: Set build target
+        id: target
+        run: |
+          case "${{ inputs.target_os }}" in
+            linux-x86_64)   echo "triple=x86_64-unknown-linux-gnu" >> $GITHUB_OUTPUT ;;
+            linux-aarch64)  echo "triple=aarch64-unknown-linux-gnu" >> $GITHUB_OUTPUT ;;
+            macos-x86_64)   echo "triple=x86_64-apple-darwin" >> $GITHUB_OUTPUT ;;
+            macos-aarch64)  echo "triple=aarch64-apple-darwin" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ steps.target.outputs.triple }}
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          TG_API_ID_BUILTIN: ${{ inputs.embed_credentials && secrets.TG_API_ID || '' }}
+          TG_API_HASH_BUILTIN: ${{ inputs.embed_credentials && secrets.TG_API_HASH || '' }}
+
+      - name: Determine package suffix
+        id: suffix
+        run: |
+          if [ "${{ inputs.embed_credentials }}" = "true" ]; then
+            echo "label=bundled" >> $GITHUB_OUTPUT
+          else
+            echo "label=byokey" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          cp target/${{ steps.target.outputs.triple }}/release/tgcryptfs dist/
+          cp README.md dist/
+          cp docs/SECURITY.md dist/
+
+          if [ "${{ inputs.embed_credentials }}" = "true" ]; then
+            cat > dist/SETUP.md << 'EOF'
+          # TGCryptFS Quick Start (Credentials Bundled)
+
+          This build has Telegram API credentials baked in. You do NOT need
+          to register your own Telegram application.
+
+          ## 1. Authenticate
+
+          ```bash
+          # Make binary executable
+          chmod +x tgcryptfs
+
+          # Log in (sends a code to your Telegram app)
+          ./tgcryptfs auth login
+
+          # Verify
+          ./tgcryptfs auth status
+          ```
+
+          ## 2. Create Your First Volume
+
+          ```bash
+          ./tgcryptfs volume create --name my-vault
+          ./tgcryptfs volume list
+          ```
+
+          ## 3. Mount (requires FUSE)
+
+          macOS: `brew install macfuse`
+          Linux: `sudo apt install libfuse-dev fuse`
+
+          ```bash
+          mkdir -p ~/mnt/vault
+          ./tgcryptfs volume mount my-vault ~/mnt/vault
+          ```
+
+          ## Security Notes
+
+          - Session files (.session) contain your Telegram auth token - protect them
+          - Volume passwords use Argon2id - use strong passwords
+          - The 22-word sentence reference is your recovery key - store it offline
+          EOF
+          else
+            cat > dist/SETUP.md << 'EOF'
+          # TGCryptFS Setup Guide (Bring Your Own Key)
+
+          This build requires you to provide your own Telegram API credentials.
+
+          ## 1. Get Telegram API Credentials
+
+          1. Visit https://my.telegram.org
+          2. Log in with your phone number
+          3. Go to "API development tools"
+          4. Create a new application (name and platform don't matter)
+          5. Copy your **api_id** (number) and **api_hash** (hex string)
+
+          ## 2. Configure Credentials
+
+          Option A - Environment variables (recommended):
+          ```bash
+          export TG_API_ID=12345678
+          export TG_API_HASH=0123456789abcdef0123456789abcdef
+          ```
+          Add these to your shell profile (~/.bashrc, ~/.zshrc) for persistence.
+
+          Option B - CLI arguments:
+          ```bash
+          ./tgcryptfs auth login --api-id 12345678 --api-hash 0123456789abcdef
+          ```
+
+          ## 3. Authenticate
+
+          ```bash
+          chmod +x tgcryptfs
+          ./tgcryptfs auth login
+          ./tgcryptfs auth status
+          ```
+
+          ## 4. Create Your First Volume
+
+          ```bash
+          ./tgcryptfs volume create --name my-vault
+          ./tgcryptfs volume list
+          ```
+
+          ## 5. Mount (requires FUSE)
+
+          macOS: `brew install macfuse`
+          Linux: `sudo apt install libfuse-dev fuse`
+
+          ```bash
+          mkdir -p ~/mnt/vault
+          ./tgcryptfs volume mount my-vault ~/mnt/vault
+          ```
+
+          ## Security Notes
+
+          - Your Telegram API credentials are never stored by TGCryptFS
+          - Session files (.session) contain your Telegram auth token - protect them
+          - Volume passwords use Argon2id - use strong passwords
+          - The 22-word sentence reference is your recovery key - store it offline
+          EOF
+          fi
+
+          cd dist && tar czf ../tgcryptfs-${{ inputs.target_os }}-${{ steps.suffix.outputs.label }}.tar.gz *
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgcryptfs-${{ inputs.target_os }}-${{ steps.suffix.outputs.label }}
+          path: tgcryptfs-${{ inputs.target_os }}-${{ steps.suffix.outputs.label }}.tar.gz
+          retention-days: 30

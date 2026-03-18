@@ -1,0 +1,38 @@
+[package]
+name = "tgcryptfs-core"
+description = "Core library for TGCryptFS v2 - crypto, block, metadata, policy (no I/O)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "../../README.md"
+
+[dependencies]
+chacha20poly1305 = { workspace = true }
+blake3 = { workspace = true }
+hkdf = { workspace = true }
+sha2 = { workspace = true }
+argon2 = { workspace = true }
+ml-kem = { workspace = true }
+kem = { workspace = true }
+rand = { workspace = true }
+zeroize = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+postcard = { workspace = true }
+ciborium = { workspace = true }
+lz4_flex = { workspace = true }
+zstd = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+hex = { workspace = true }
+base32 = { workspace = true }
+dirs = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = { workspace = true }

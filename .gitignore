@@ -1,0 +1,20 @@
+/target
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Session files
+*.session
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Tools (lives in separate repo-replay repository)
+tools/

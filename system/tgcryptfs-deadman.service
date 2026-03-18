@@ -1,0 +1,63 @@
+# tgcryptfs dead man's switch check-in -- systemd user service
+#
+# This service is triggered by tgcryptfs-deadman.timer to perform
+# periodic dead man's switch check-ins. If check-ins stop (device lost,
+# user incapacitated), the dead man's switch can trigger configured
+# destruction actions on encrypted volumes.
+#
+# Install (with companion timer):
+#   mkdir -p ~/.config/systemd/user/
+#   cp tgcryptfs-deadman.service ~/.config/systemd/user/
+#   cp tgcryptfs-deadman.timer ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now tgcryptfs-deadman.timer
+#
+# Manual check-in:
+#   systemctl --user start tgcryptfs-deadman.service
+#
+# Logs:
+#   journalctl --user -u tgcryptfs-deadman.service
+
+[Unit]
+Description=tgcryptfs dead man's switch check-in
+Documentation=https://github.com/hedonistic-io/tgcryptfs
+After=network.target
+ConditionPathExists=%h/.config/tgcryptfs/deadman.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/tgcryptfs deadman status --check-in
+EnvironmentFile=%h/.config/tgcryptfs/.env
+WorkingDirectory=%h
+
+# Timeout: if the check-in hangs, fail after 60 seconds
+TimeoutStartSec=60
+
+# -- Security hardening -------------------------------------------------------
+
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.config/tgcryptfs %h/.local/share/tgcryptfs
+PrivateTmp=true
+
+NoNewPrivileges=true
+CapabilityBoundingSet=
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+# Not installed directly; activated by tgcryptfs-deadman.timer
+WantedBy=default.target

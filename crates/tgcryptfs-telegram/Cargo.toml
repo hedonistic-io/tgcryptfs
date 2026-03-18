@@ -1,0 +1,28 @@
+[package]
+name = "tgcryptfs-telegram"
+description = "Telegram API backend for block upload/download and group management"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "../../README.md"
+
+[dependencies]
+tgcryptfs-core = { workspace = true }
+grammers-client = { workspace = true }
+grammers-session = { workspace = true }
+grammers-tl-types = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
