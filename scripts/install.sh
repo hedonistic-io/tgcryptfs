@@ -438,6 +438,17 @@ else
     fatal "Installation verification failed."
 fi
 
+# -- Telemetry (anonymous install counter) ------------------------------------
+
+# Sends a single anonymous ping to track install counts.
+# No personal data, no IP logging -- just OS, arch, and version.
+# Set TGCRYPTFS_NO_TELEMETRY=1 to disable.
+if [ "${TGCRYPTFS_NO_TELEMETRY:-}" != "1" ]; then
+    curl -fsSL -o /dev/null -w "" \
+        "https://tgcryptfs.hedonistic.io/install-ping?os=${OS}&arch=${ARCH}&v=${VERSION}" \
+        2>/dev/null &
+fi
+
 # -- Done ----------------------------------------------------------------------
 
 header "Installation complete"
