@@ -107,10 +107,16 @@ fn deterministic_key_derivation() {
     let salt = [0xCC; 32];
     let params = Argon2Params::default();
 
-    let h1 =
-        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap(), &salt).unwrap();
-    let h2 =
-        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap(), &salt).unwrap();
+    let h1 = kdf::derive_hierarchy(
+        kdf::derive_root_key(password, &salt, &params).unwrap(),
+        &salt,
+    )
+    .unwrap();
+    let h2 = kdf::derive_hierarchy(
+        kdf::derive_root_key(password, &salt, &params).unwrap(),
+        &salt,
+    )
+    .unwrap();
 
     assert_eq!(h1.data.as_bytes(), h2.data.as_bytes());
     assert_eq!(h1.meta.as_bytes(), h2.meta.as_bytes());
@@ -124,8 +130,11 @@ fn integrity_mac_verification() {
     let salt = [0xDD; 32];
     let params = Argon2Params::default();
 
-    let hierarchy =
-        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap(), &salt).unwrap();
+    let hierarchy = kdf::derive_hierarchy(
+        kdf::derive_root_key(password, &salt, &params).unwrap(),
+        &salt,
+    )
+    .unwrap();
 
     let data = b"critical metadata";
     let mac = blake3::keyed_hash(&hierarchy.integrity, data);

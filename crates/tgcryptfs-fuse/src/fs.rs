@@ -32,6 +32,7 @@ pub struct CryptFs {
     conn: Connection,
     schema: OpaqueSchema,
     meta_key: SymmetricKey,
+    #[allow(dead_code)] // Used for epoch-scoped block encryption (in progress)
     data_key: SymmetricKey,
     /// Current key epoch for new block encryption.
     current_epoch: u32,

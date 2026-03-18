@@ -131,7 +131,6 @@ impl<'a> SnapshotStore<'a> {
             )
         })
     }
-
 }
 
 #[cfg(test)]

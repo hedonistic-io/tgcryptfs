@@ -4,7 +4,6 @@
 ///
 /// List selection rotates by word position (word 0 = list 0, word 1 = list 1, etc.)
 /// which provides resistance to targeted dictionary attacks on individual positions.
-
 pub const WORDLIST_0: &[&str; 4096] = &[
     "abacus",
     "abandon",
@@ -4103,7 +4102,6 @@ pub const WORDLIST_0: &[&str; 4096] = &[
     "zoo",
     "zoom",
 ];
-
 pub const WORDLIST_1: &[&str; 4096] = &[
     "abacus",
     "abide",
@@ -8202,7 +8200,6 @@ pub const WORDLIST_1: &[&str; 4096] = &[
     "zone",
     "zucchini",
 ];
-
 pub const WORDLIST_2: &[&str; 4096] = &[
     "abacus",
     "abandon",
@@ -12301,7 +12298,6 @@ pub const WORDLIST_2: &[&str; 4096] = &[
     "zone",
     "zoo",
 ];
-
 pub const WORDLIST_3: &[&str; 4096] = &[
     "abbey",
     "abbot",
