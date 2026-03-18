@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  tgcryptfs API server - macOS launchd user agent
+
+  Install:
+    mkdir -p ~/Library/LaunchAgents
+    cp io.hedonistic.tgcryptfs-api.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/io.hedonistic.tgcryptfs-api.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/io.hedonistic.tgcryptfs-api.plist
+    rm ~/Library/LaunchAgents/io.hedonistic.tgcryptfs-api.plist
+
+  Logs:
+    tail -f ~/Library/Logs/tgcryptfs/api-stdout.log
+    tail -f ~/Library/Logs/tgcryptfs/api-stderr.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.hedonistic.tgcryptfs-api</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/tgcryptfs</string>
+        <string>serve</string>
+        <string>--bind</string>
+        <string>127.0.0.1:8080</string>
+    </array>
+
+    <!-- Restart on crash, but not on clean exit -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!-- Do not start at load; start manually or on demand -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Throttle restarts: wait 5 seconds between launch attempts -->
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>/tmp</string>
+
+    <!-- Log output -->
+    <key>StandardOutPath</key>
+    <string>/Users/REPLACE_WITH_USERNAME/Library/Logs/tgcryptfs/api-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/REPLACE_WITH_USERNAME/Library/Logs/tgcryptfs/api-stderr.log</string>
+
+    <!-- Environment variables (credentials loaded from .env by the binary) -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>TGCRYPTFS_CONFIG_DIR</key>
+        <string>/Users/REPLACE_WITH_USERNAME/.config/tgcryptfs</string>
+    </dict>
+
+    <!-- Resource limits -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>4096</integer>
+    </dict>
+
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>8192</integer>
+    </dict>
+
+    <!-- Process settings -->
+    <key>Nice</key>
+    <integer>0</integer>
+
+    <key>ProcessType</key>
+    <string>Standard</string>
+</dict>
+</plist>

@@ -1,0 +1,39 @@
+# tgcryptfs dead man's switch timer -- systemd user timer
+#
+# Triggers tgcryptfs-deadman.service once per day to perform
+# a dead man's switch check-in. Uses Persistent=true so that
+# missed check-ins (laptop asleep, system off) are caught up
+# on the next boot.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user/
+#   cp tgcryptfs-deadman.timer ~/.config/systemd/user/
+#   cp tgcryptfs-deadman.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now tgcryptfs-deadman.timer
+#
+# Check timer status:
+#   systemctl --user status tgcryptfs-deadman.timer
+#   systemctl --user list-timers
+
+[Unit]
+Description=tgcryptfs dead man's switch daily check-in timer
+Documentation=https://github.com/hedonistic-io/tgcryptfs
+
+[Timer]
+# Run once per day
+OnCalendar=daily
+
+# If the system was off when the timer should have fired,
+# run immediately on next boot/login
+Persistent=true
+
+# Add random delay up to 15 minutes to avoid thundering herd
+# if multiple machines check in simultaneously
+RandomizedDelaySec=900
+
+# Ensure the timer is reasonably accurate (default is 1 minute)
+AccuracySec=60
+
+[Install]
+WantedBy=timers.target
