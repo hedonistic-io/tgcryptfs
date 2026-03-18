@@ -261,10 +261,11 @@ footer a { color: var(--accent); }
   <div class="links">
     <a href="#features">Features</a>
     <a href="#security">Security</a>
+    <a href="#install">Install</a>
     <a href="#architecture">Architecture</a>
+    <a href="#docs">Docs</a>
     <a href="#roadmap">Roadmap</a>
-    <a href="#contribute">Contribute</a>
-    <a href="https://github.com/user/tgcryptfs">GitHub</a>
+    <a href="https://github.com/hedonistic-io/tgcryptfs">GitHub</a>
   </div>
 </nav>
 
@@ -273,7 +274,7 @@ footer a { color: var(--accent); }
   <h1>TGCryptFS</h1>
   <p class="tagline">
     Post-quantum encrypted filesystem that turns Telegram into unlimited, zero-knowledge cloud storage.
-    Open source. Built in Rust. 270+ tests.
+    Open source. Built in Rust. 471 tests.
   </p>
   <div class="badges">
     <span class="badge green">MIT License</span>
@@ -282,17 +283,17 @@ footer a { color: var(--accent); }
     <span class="badge">v0.1.0</span>
   </div>
   <div class="cta-group">
-    <a href="https://github.com/user/tgcryptfs" class="cta cta-primary">View on GitHub</a>
+    <a href="https://github.com/hedonistic-io/tgcryptfs" class="cta cta-primary">View on GitHub</a>
     <a href="#quickstart" class="cta cta-secondary">Quick Start</a>
   </div>
   <div class="install-block" id="quickstart">
-    <span class="comment"># Clone and build</span><br>
-    git clone https://github.com/user/tgcryptfs.git<br>
-    cd tgcryptfs && cargo build --release<br><br>
-    <span class="comment"># Interactive setup (guides you through Telegram API setup)</span><br>
-    ./target/release/tgcryptfs configure<br><br>
-    <span class="comment"># Create your first encrypted volume</span><br>
-    ./target/release/tgcryptfs volume create --name my-vault
+    <span class="comment"># Install (Linux and macOS)</span><br>
+    curl -fsSL https://raw.githubusercontent.com/hedonistic-io/tgcryptfs/main/scripts/install.sh | bash<br><br>
+    <span class="comment"># Set up Telegram API credentials</span><br>
+    tgcryptfs configure<br><br>
+    <span class="comment"># Create and mount your first encrypted volume</span><br>
+    tgcryptfs volume create --name my-vault<br>
+    tgcryptfs volume mount my-vault ~/secure
   </div>
 </section>
 
@@ -406,8 +407,90 @@ footer a { color: var(--accent); }
   </div>
 </section>
 
+<!-- Install -->
+<section id="install">
+  <div class="container">
+    <h2>Installation</h2>
+    <p class="subtitle">Three ways to get started, on any platform</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="tag">Recommended</div>
+        <h3>Install Script</h3>
+        <p>One-line installer for Linux and macOS. Auto-detects your OS and architecture, installs FUSE dependencies, downloads the latest release with SHA-256 verification, and sets up shell completions.</p>
+        <pre style="margin-top:1rem; background:var(--bg); padding:0.75rem; border-radius:6px; font-size:0.8rem; color:var(--green); overflow-x:auto;">curl -fsSL https://raw.githubusercontent.com/hedonistic-io/tgcryptfs/main/scripts/install.sh | bash</pre>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Rust Users</div>
+        <h3>Cargo Install</h3>
+        <p>If you have a Rust toolchain (1.75+), install directly from source via Cargo. Requires FUSE development headers on your system.</p>
+        <pre style="margin-top:1rem; background:var(--bg); padding:0.75rem; border-radius:6px; font-size:0.8rem; color:var(--green); overflow-x:auto;">cargo install tgcryptfs-cli</pre>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Build from Source</div>
+        <h3>Clone and Build</h3>
+        <p>Full control. Clone the repo, build with cargo, run the test suite. A build script checks prerequisites and handles platform-specific setup.</p>
+        <pre style="margin-top:1rem; background:var(--bg); padding:0.75rem; border-radius:6px; font-size:0.8rem; color:var(--green); overflow-x:auto;">git clone https://github.com/hedonistic-io/tgcryptfs.git
+cd tgcryptfs && ./scripts/build.sh --install</pre>
+      </div>
+    </div>
+    <div style="margin-top:2rem;">
+      <h3 style="text-align:center; margin-bottom:1rem;">Platform Support</h3>
+      <table class="crypto-table" style="max-width:800px; margin:0 auto;">
+        <thead><tr><th>Platform</th><th>Install Methods</th><th>FUSE</th><th>API Server</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Linux x86_64</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>libfuse3-dev or fuse3</td></tr>
+          <tr><td>Linux aarch64</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>libfuse3-dev or fuse3</td></tr>
+          <tr><td>macOS Intel</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>macFUSE required</td></tr>
+          <tr><td>macOS Apple Silicon</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>macFUSE required</td></tr>
+          <tr><td>Windows</td><td>Source only</td><td style="color:var(--orange);">Experimental</td><td style="color:var(--green);">Yes</td><td>WinFsp required</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Docs -->
+<section class="features" id="docs">
+  <div class="container">
+    <h2>Documentation</h2>
+    <p class="subtitle">Everything you need from first install to production deployment</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="tag">Start Here</div>
+        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/GETTING_STARTED.md">Getting Started</a></h3>
+        <p>Installation, Telegram setup, your first encrypted volume, mounting, and basic operations. The complete first-run walkthrough.</p>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Setup</div>
+        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/TELEGRAM_SETUP.md">Telegram API Setup</a></h3>
+        <p>Step-by-step guide to obtaining your Telegram API credentials. Includes the automated setup script and manual configuration options.</p>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Reference</div>
+        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/CLI_REFERENCE.md">CLI Reference</a></h3>
+        <p>Complete command-line documentation for all 9 subcommands: auth, volume, deadman, configure, status, key, share, serve, and completions.</p>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Reference</div>
+        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/API_REFERENCE.md">REST API Reference</a></h3>
+        <p>All 21 endpoints documented with request/response formats, authentication, and error codes. Bearer token auth and CORS configuration.</p>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Deep Dive</div>
+        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SECURITY.md">Security Model</a></h3>
+        <p>Threat model, cryptographic design, key hierarchy, schema obfuscation, and forward secrecy. How TGCryptFS protects your data.</p>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Guide</div>
+        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/USER_GUIDE.md">User Guide</a></h3>
+        <p>Day-to-day usage: mounting, sharing volumes, key management, dead man's switch configuration, running as a system service.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Architecture -->
-<section class="features" id="architecture">
+<section id="architecture">
   <div class="container">
     <h2>Architecture</h2>
     <p class="subtitle">9 focused crates. Pure separation of concerns. Zero I/O in the crypto layer.</p>
@@ -452,7 +535,7 @@ FUSE ops   MTProto    ML-KEM     Triggers
           <li>BLAKE3 deduplication</li>
           <li>Epoch-based forward secrecy</li>
           <li>Opaque SQLite schema</li>
-          <li>270+ unit and integration tests</li>
+          <li>471 unit, integration, and property-based tests</li>
         </ul>
       </div>
       <div class="roadmap-card">
@@ -469,21 +552,22 @@ FUSE ops   MTProto    ML-KEM     Triggers
         </ul>
       </div>
       <div class="roadmap-card">
-        <div class="phase current">Phase 3 - In Progress</div>
+        <div class="phase done">v0.1.0 - Complete</div>
         <h3>Production Hardening</h3>
         <ul>
-          <li>End-to-end Telegram integration testing</li>
-          <li>FUSE mount with block engine wiring</li>
-          <li>Interactive auth flow (code + 2FA)</li>
-          <li>Key rotation implementation</li>
+          <li>REST API server (21 endpoints)</li>
+          <li>Bearer token authentication</li>
+          <li>Volume session manager</li>
+          <li>Security hardening (zeroization, auth, CORS)</li>
           <li>Property-based testing (proptest)</li>
-          <li>Fuzzing critical parsers</li>
-          <li>Performance benchmarks</li>
+          <li>Shell completions (bash, zsh, fish)</li>
+          <li>Multi-platform CI/CD and release automation</li>
+          <li>471 tests passing</li>
         </ul>
       </div>
       <div class="roadmap-card">
-        <div class="phase next">Phase 4 - Planned</div>
-        <h3>Multi-Platform & UX</h3>
+        <div class="phase current">Next - In Progress</div>
+        <h3>Multi-Platform &amp; UX</h3>
         <ul>
           <li>GUI application (Tauri or egui)</li>
           <li>System tray integration</li>
@@ -539,7 +623,7 @@ FUSE ops   MTProto    ML-KEM     Triggers
       <div class="step">
         <div class="num">03</div>
         <h3>Build & Test</h3>
-        <p>Write your code, add tests, run <code>make ci</code> to verify formatting, linting, and all 270+ tests.</p>
+        <p>Write your code, add tests, run <code>make ci</code> to verify formatting, linting, and all 471 tests.</p>
       </div>
       <div class="step">
         <div class="num">04</div>
@@ -549,7 +633,7 @@ FUSE ops   MTProto    ML-KEM     Triggers
     </div>
     <br>
     <div style="text-align:center">
-      <a href="https://github.com/user/tgcryptfs/blob/main/CONTRIBUTING.md" class="cta cta-secondary">Read Contribution Guide</a>
+      <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CONTRIBUTING.md" class="cta cta-secondary">Read Contribution Guide</a>
     </div>
   </div>
 </section>
@@ -563,7 +647,7 @@ FUSE ops   MTProto    ML-KEM     Triggers
         <div style="color: var(--muted); font-size: 0.9rem;">Rust Crates</div>
       </div>
       <div>
-        <div style="font-size: 2.5rem; font-weight: 800; color: var(--green); font-family: var(--font);">270+</div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: var(--green); font-family: var(--font);">471</div>
         <div style="color: var(--muted); font-size: 0.9rem;">Tests</div>
       </div>
       <div>
@@ -584,12 +668,12 @@ FUSE ops   MTProto    ML-KEM     Triggers
 
 <footer>
   <p>
-    TGCryptFS is open source under the <a href="https://github.com/user/tgcryptfs/blob/main/LICENSE">MIT License</a>.
+    TGCryptFS is open source under the <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/LICENSE">MIT License</a>.
     <br>
-    <a href="https://github.com/user/tgcryptfs">GitHub</a> &middot;
-    <a href="https://github.com/user/tgcryptfs/blob/main/CONTRIBUTING.md">Contribute</a> &middot;
-    <a href="https://github.com/user/tgcryptfs/blob/main/docs/SECURITY.md">Security</a> &middot;
-    <a href="https://github.com/user/tgcryptfs/blob/main/CHANGELOG.md">Changelog</a>
+    <a href="https://github.com/hedonistic-io/tgcryptfs">GitHub</a> &middot;
+    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CONTRIBUTING.md">Contribute</a> &middot;
+    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SECURITY.md">Security</a> &middot;
+    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CHANGELOG.md">Changelog</a>
   </p>
 </footer>
 
