@@ -12,11 +12,14 @@ pub fn keyed_hash(key: &SymmetricKey, data: &[u8]) -> [u8; 32] {
 
 /// Derive an opaque identifier by hashing a domain-separated input with a key.
 ///
-/// Used for schema obfuscation: `BLAKE3(Kschema || domain || ":" || name)`.
+/// Uses length-prefixed encoding to prevent ambiguity:
+/// `BLAKE3(Kschema || len(domain) || domain || len(name) || name)`.
+/// This ensures `("col", "x:y")` never collides with `("col:x", "y")`.
 pub fn derive_opaque_id(key: &SymmetricKey, domain: &str, name: &str) -> [u8; 32] {
     let mut hasher = blake3::Hasher::new_keyed(key.as_bytes());
+    hasher.update(&(domain.len() as u64).to_le_bytes());
     hasher.update(domain.as_bytes());
-    hasher.update(b":");
+    hasher.update(&(name.len() as u64).to_le_bytes());
     hasher.update(name.as_bytes());
     *hasher.finalize().as_bytes()
 }

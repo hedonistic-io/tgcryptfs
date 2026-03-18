@@ -23,6 +23,7 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 libc = { workspace = true }
 tracing = { workspace = true }
+zeroize = { workspace = true }
 blake3 = { workspace = true }
 hex = { workspace = true }
 rand = { workspace = true }

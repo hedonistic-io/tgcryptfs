@@ -11,7 +11,7 @@ fn full_key_derivation_and_encryption_pipeline() {
     let params = Argon2Params::default();
 
     let root_key = kdf::derive_root_key(password, &salt, &params).unwrap();
-    let hierarchy = kdf::derive_hierarchy(root_key).unwrap();
+    let hierarchy = kdf::derive_hierarchy(root_key, &salt).unwrap();
 
     let plaintext = b"top secret file contents";
     let aad = b"inode:42:block:0";
@@ -83,7 +83,7 @@ fn epoch_key_forward_secrecy() {
     let params = Argon2Params::default();
 
     let root_key = kdf::derive_root_key(password, &salt, &params).unwrap();
-    let hierarchy = kdf::derive_hierarchy(root_key).unwrap();
+    let hierarchy = kdf::derive_hierarchy(root_key, &salt).unwrap();
 
     let epoch0 = kdf::derive_epoch_key(&hierarchy.data, 0).unwrap();
     let epoch1 = kdf::derive_epoch_key(&hierarchy.data, 1).unwrap();
@@ -108,9 +108,9 @@ fn deterministic_key_derivation() {
     let params = Argon2Params::default();
 
     let h1 =
-        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap()).unwrap();
+        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap(), &salt).unwrap();
     let h2 =
-        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap()).unwrap();
+        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap(), &salt).unwrap();
 
     assert_eq!(h1.data.as_bytes(), h2.data.as_bytes());
     assert_eq!(h1.meta.as_bytes(), h2.meta.as_bytes());
@@ -125,7 +125,7 @@ fn integrity_mac_verification() {
     let params = Argon2Params::default();
 
     let hierarchy =
-        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap()).unwrap();
+        kdf::derive_hierarchy(kdf::derive_root_key(password, &salt, &params).unwrap(), &salt).unwrap();
 
     let data = b"critical metadata";
     let mac = blake3::keyed_hash(&hierarchy.integrity, data);

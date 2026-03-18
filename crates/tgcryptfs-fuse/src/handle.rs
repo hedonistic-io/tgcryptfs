@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use zeroize::Zeroize;
 
 /// Tracks open file handles for the FUSE filesystem.
 pub struct HandleTable {
@@ -64,9 +65,12 @@ impl HandleTable {
         }
     }
 
-    /// Close (release) a file handle. Returns the handle if it existed.
+    /// Close (release) a file handle. Zeroizes the write buffer before dropping.
+    /// Returns the handle if it existed.
     pub fn close(&self, fh: u64) -> Option<FileHandle> {
-        self.handles.lock().unwrap().remove(&fh)
+        let mut handle = self.handles.lock().unwrap().remove(&fh)?;
+        handle.write_buffer.zeroize();
+        Some(handle)
     }
 
     /// Get all open handles for an inode.

@@ -21,8 +21,8 @@ fn wrong_password_different_hierarchy() {
     assert_ne!(root1.as_bytes(), root2.as_bytes());
 
     // Derive full hierarchies
-    let hier1 = kdf::derive_hierarchy(root1).unwrap();
-    let hier2 = kdf::derive_hierarchy(root2).unwrap();
+    let hier1 = kdf::derive_hierarchy(root1, &[0x01; 32]).unwrap();
+    let hier2 = kdf::derive_hierarchy(root2, &[0x02; 32]).unwrap();
 
     // Every derived key differs
     assert_ne!(hier1.data.as_bytes(), hier2.data.as_bytes());
@@ -167,7 +167,7 @@ fn hierarchy_keys_all_distinct() {
     let salt = [0x88u8; 32];
     let params = Argon2Params::default();
     let root = kdf::derive_root_key(b"password", &salt, &params).unwrap();
-    let hier = kdf::derive_hierarchy(root).unwrap();
+    let hier = kdf::derive_hierarchy(root, &[0x01; 32]).unwrap();
 
     // All 6 derived keys should be different from each other
     let keys = [

@@ -99,7 +99,7 @@ pub fn create_volume(
 
     // Derive key hierarchy
     let root_key = kdf::derive_root_key(password, &config.salt, &config.kdf_params)?;
-    let hierarchy = kdf::derive_hierarchy(root_key)?;
+    let hierarchy = kdf::derive_hierarchy(root_key, &config.salt)?;
 
     // Store password verification hash (allows "wrong password" detection on open)
     config.password_verification_hash = Some(compute_verification_hash(&hierarchy));
@@ -107,8 +107,15 @@ pub fn create_volume(
     // Save config to disk (does NOT contain keys)
     let config_json = serde_json::to_string_pretty(&config)
         .map_err(|e| CoreError::Serialization(e.to_string()))?;
-    std::fs::write(&paths.config_path, config_json)
+    std::fs::write(&paths.config_path, &config_json)
         .map_err(|e| CoreError::Volume(format!("write config: {e}")))?;
+    // Restrict config file permissions (contains salt + verification hash)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(0o600);
+        let _ = std::fs::set_permissions(&paths.config_path, perms);
+    }
 
     Ok(CreateVolumeResult {
         config,
@@ -138,13 +145,20 @@ pub fn open_volume(
         .map_err(|e| CoreError::Serialization(format!("parse config: {e}")))?;
 
     let root_key = kdf::derive_root_key(password, &config.salt, &config.kdf_params)?;
-    let hierarchy = kdf::derive_hierarchy(root_key)?;
+    let hierarchy = kdf::derive_hierarchy(root_key, &config.salt)?;
 
     // Verify password if verification hash is stored (volumes created before
     // this feature won't have one, so we skip verification for those)
     if let Some(ref expected_hash) = config.password_verification_hash {
         let actual_hash = compute_verification_hash(&hierarchy);
-        if &actual_hash != expected_hash {
+        // Constant-time comparison to prevent timing side-channel on password verification
+        let actual_bytes = actual_hash.as_bytes();
+        let expected_bytes = expected_hash.as_bytes();
+        let mut diff = actual_bytes.len() ^ expected_bytes.len();
+        for (a, b) in actual_bytes.iter().zip(expected_bytes.iter()) {
+            diff |= usize::from(a ^ b);
+        }
+        if diff != 0 {
             return Err(CoreError::Decryption(
                 "wrong password: verification hash mismatch".into(),
             ));
@@ -203,6 +217,14 @@ pub fn delete_volume(volume_id: &str, volumes_dir: &Path) -> Result<()> {
 }
 
 /// Overwrite all files in a directory with random data before deletion.
+///
+/// **Limitations**: Multi-pass overwrite is unreliable on SSDs (wear-leveling
+/// remaps blocks), copy-on-write filesystems (APFS, Btrfs, ZFS), and network
+/// storage. The primary security guarantee comes from the encryption itself:
+/// once the key hierarchy is destroyed (which happens when the volume config
+/// is deleted and keys go out of scope with `ZeroizeOnDrop`), the encrypted
+/// data is irrecoverable regardless of whether the ciphertext persists on disk.
+/// The overwrite passes are defense-in-depth for rotating media and tmpfs.
 fn shred_directory(dir: &Path) -> Result<()> {
     let entries = std::fs::read_dir(dir)
         .map_err(|e| CoreError::Volume(format!("read dir for shred: {e}")))?;

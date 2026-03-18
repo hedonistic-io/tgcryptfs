@@ -39,8 +39,21 @@ pub fn derive_root_key(
 }
 
 /// Derive a child key from a parent key using HKDF-SHA256.
+///
+/// An optional salt provides additional domain separation between volumes
+/// that might share a password. When `None`, HKDF uses a zero-filled salt
+/// per RFC 5869, which is safe when IKM is already uniform.
 pub fn hkdf_derive(parent: &SymmetricKey, info: &[u8]) -> Result<SymmetricKey> {
-    let hk = Hkdf::<Sha256>::new(None, parent.as_bytes());
+    hkdf_derive_with_salt(parent, info, None)
+}
+
+/// Derive a child key with an explicit salt (e.g., the volume salt).
+pub fn hkdf_derive_with_salt(
+    parent: &SymmetricKey,
+    info: &[u8],
+    salt: Option<&[u8]>,
+) -> Result<SymmetricKey> {
+    let hk = Hkdf::<Sha256>::new(salt, parent.as_bytes());
     let mut okm = [0u8; 32];
     hk.expand(info, &mut okm)
         .map_err(|e| CoreError::KeyDerivation(format!("hkdf: {e}")))?;
@@ -49,16 +62,19 @@ pub fn hkdf_derive(parent: &SymmetricKey, info: &[u8]) -> Result<SymmetricKey> {
     Ok(key)
 }
 
-/// Derive the complete key hierarchy from a root key.
-pub fn derive_hierarchy(root: SymmetricKey) -> Result<KeyHierarchy> {
+/// Derive the complete key hierarchy from a root key and volume salt.
+///
+/// The salt is passed to HKDF's extract step, providing additional
+/// defense-in-depth against related-key scenarios across volumes.
+pub fn derive_hierarchy(root: SymmetricKey, salt: &[u8; 32]) -> Result<KeyHierarchy> {
     use crate::crypto::keys::labels;
 
-    let data = hkdf_derive(&root, labels::DATA)?;
-    let meta = hkdf_derive(&root, labels::META)?;
-    let schema = hkdf_derive(&root, labels::SCHEMA)?;
-    let integrity = hkdf_derive(&root, labels::INTEGRITY)?;
-    let wrapping = hkdf_derive(&root, labels::WRAPPING)?;
-    let deadman = hkdf_derive(&root, labels::DEADMAN)?;
+    let data = hkdf_derive_with_salt(&root, labels::DATA, Some(salt))?;
+    let meta = hkdf_derive_with_salt(&root, labels::META, Some(salt))?;
+    let schema = hkdf_derive_with_salt(&root, labels::SCHEMA, Some(salt))?;
+    let integrity = hkdf_derive_with_salt(&root, labels::INTEGRITY, Some(salt))?;
+    let wrapping = hkdf_derive_with_salt(&root, labels::WRAPPING, Some(salt))?;
+    let deadman = hkdf_derive_with_salt(&root, labels::DEADMAN, Some(salt))?;
 
     Ok(KeyHierarchy {
         root,
@@ -142,7 +158,7 @@ mod tests {
     #[test]
     fn derive_hierarchy_all_keys_distinct() {
         let root = SymmetricKey::from_bytes([0x42; 32]);
-        let h = derive_hierarchy(root).unwrap();
+        let h = derive_hierarchy(root, &[0x01; 32]).unwrap();
 
         let keys: Vec<&[u8; 32]> = vec![
             h.root.as_bytes(),

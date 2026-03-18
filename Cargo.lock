@@ -2362,7 +2362,7 @@ checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 
 [[package]]
 name = "tgcryptfs-api"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "axum",
  "blake3",
@@ -2394,7 +2394,7 @@ dependencies = [
 
 [[package]]
 name = "tgcryptfs-cache"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "hex",
  "serde",
@@ -2407,7 +2407,7 @@ dependencies = [
 
 [[package]]
 name = "tgcryptfs-cli"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2438,7 +2438,7 @@ dependencies = [
 
 [[package]]
 name = "tgcryptfs-core"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "argon2",
  "base32",
@@ -2466,7 +2466,7 @@ dependencies = [
 
 [[package]]
 name = "tgcryptfs-deadman"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "rand 0.8.5",
  "serde",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "tgcryptfs-fuse"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "fuser",
@@ -2500,11 +2500,12 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+ "zeroize",
 ]
 
 [[package]]
 name = "tgcryptfs-sharing"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "base64ct",
  "postcard",
@@ -2520,7 +2521,7 @@ dependencies = [
 
 [[package]]
 name = "tgcryptfs-store"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "hex",
@@ -2539,7 +2540,7 @@ dependencies = [
 
 [[package]]
 name = "tgcryptfs-telegram"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "grammers-client",

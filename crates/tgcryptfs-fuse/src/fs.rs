@@ -32,8 +32,9 @@ pub struct CryptFs {
     conn: Connection,
     schema: OpaqueSchema,
     meta_key: SymmetricKey,
-    #[allow(dead_code)] // Reserved for epoch-aware block encryption
     data_key: SymmetricKey,
+    /// Current key epoch for new block encryption.
+    current_epoch: u32,
     pub handles: HandleTable,
     uid: u32,
     gid: u32,
@@ -59,6 +60,7 @@ impl CryptFs {
             schema,
             meta_key,
             data_key,
+            current_epoch: 0,
             handles: HandleTable::new(),
             uid,
             gid,
@@ -66,6 +68,12 @@ impl CryptFs {
             cache: None,
             rt: None,
         }
+    }
+
+    /// Set the current epoch for block encryption.
+    pub fn with_epoch(mut self, epoch: u32) -> Self {
+        self.current_epoch = epoch;
+        self
     }
 
     /// Set the block transport (enables Telegram I/O).
@@ -88,6 +96,27 @@ impl CryptFs {
 
     pub fn store(&self) -> InodeStore<'_> {
         InodeStore::new(&self.conn, &self.schema, &self.meta_key)
+    }
+
+    /// Begin a SQLite transaction for multi-step mutations.
+    fn begin_txn(&self) -> std::result::Result<(), libc::c_int> {
+        self.conn.execute_batch("BEGIN IMMEDIATE").map_err(|e| {
+            tracing::error!(error = %e, "begin transaction failed");
+            libc::EIO
+        })
+    }
+
+    /// Commit a SQLite transaction.
+    fn commit_txn(&self) -> std::result::Result<(), libc::c_int> {
+        self.conn.execute_batch("COMMIT").map_err(|e| {
+            tracing::error!(error = %e, "commit transaction failed");
+            libc::EIO
+        })
+    }
+
+    /// Rollback a SQLite transaction.
+    fn rollback_txn(&self) {
+        let _ = self.conn.execute_batch("ROLLBACK");
     }
 
     pub fn block_store(&self) -> BlockStore<'_> {
@@ -158,7 +187,7 @@ impl CryptFs {
                     content_hash: content_hash_bytes,
                     message_id: result.message_id,
                     encrypted_size: result.size as i64,
-                    epoch: 0,
+                    epoch: self.current_epoch,
                     ref_count: 1,
                     compressed: false,
                 };
@@ -426,8 +455,14 @@ impl Filesystem for CryptFs {
             req.gid(),
         );
 
+        if let Err(e) = self.begin_txn() {
+            reply.error(e);
+            return;
+        }
+
         if let Err(e) = store.insert(&dir) {
             tracing::error!(error = %e, "mkdir insert failed");
+            self.rollback_txn();
             reply.error(libc::EIO);
             return;
         }
@@ -437,7 +472,13 @@ impl Filesystem for CryptFs {
         parent_inode.nlink += 1;
         if let Err(e) = store.update(&parent_inode) {
             tracing::error!(error = %e, "mkdir parent update failed");
+            self.rollback_txn();
             reply.error(libc::EIO);
+            return;
+        }
+
+        if let Err(e) = self.commit_txn() {
+            reply.error(e);
             return;
         }
 
@@ -505,8 +546,14 @@ impl Filesystem for CryptFs {
             req.gid(),
         );
 
+        if let Err(e) = self.begin_txn() {
+            reply.error(e);
+            return;
+        }
+
         if let Err(e) = store.insert(&file) {
             tracing::error!(error = %e, "create insert failed");
+            self.rollback_txn();
             reply.error(libc::EIO);
             return;
         }
@@ -514,7 +561,13 @@ impl Filesystem for CryptFs {
         parent_inode.children.push(ino);
         if let Err(e) = store.update(&parent_inode) {
             tracing::error!(error = %e, "create parent update failed");
+            self.rollback_txn();
             reply.error(libc::EIO);
+            return;
+        }
+
+        if let Err(e) = self.commit_txn() {
+            reply.error(e);
             return;
         }
 
@@ -744,6 +797,11 @@ impl Filesystem for CryptFs {
             return;
         }
 
+        if let Err(e) = self.begin_txn() {
+            reply.error(e);
+            return;
+        }
+
         // Remove from parent's children
         if let Ok(Some(mut parent_inode)) = store.get(parent) {
             parent_inode.children.retain(|&c| c != inode.ino);
@@ -753,10 +811,12 @@ impl Filesystem for CryptFs {
         // Delete the inode
         if let Err(e) = store.delete(inode.ino) {
             tracing::error!(error = %e, "unlink delete failed");
+            self.rollback_txn();
             reply.error(libc::EIO);
             return;
         }
 
+        let _ = self.commit_txn();
         reply.ok();
     }
 
@@ -793,6 +853,11 @@ impl Filesystem for CryptFs {
             return;
         }
 
+        if let Err(e) = self.begin_txn() {
+            reply.error(e);
+            return;
+        }
+
         // Remove from parent's children
         if let Ok(Some(mut parent_inode)) = store.get(parent) {
             parent_inode.children.retain(|&c| c != inode.ino);
@@ -802,10 +867,12 @@ impl Filesystem for CryptFs {
 
         if let Err(e) = store.delete(inode.ino) {
             tracing::error!(error = %e, "rmdir delete failed");
+            self.rollback_txn();
             reply.error(libc::EIO);
             return;
         }
 
+        let _ = self.commit_txn();
         reply.ok();
     }
 
@@ -911,6 +978,11 @@ impl Filesystem for CryptFs {
             }
         };
 
+        if let Err(e) = self.begin_txn() {
+            reply.error(e);
+            return;
+        }
+
         // Check if destination already exists and remove it
         if let Ok(Some(existing)) = store.lookup(newparent, newname_str) {
             if existing.is_dir() && !existing.children.is_empty() {
@@ -948,6 +1020,7 @@ impl Filesystem for CryptFs {
             let _ = store.update(&new_parent);
         }
 
+        let _ = self.commit_txn();
         reply.ok();
     }
 

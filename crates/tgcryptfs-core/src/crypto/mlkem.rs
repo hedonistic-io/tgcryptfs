@@ -31,13 +31,16 @@ pub fn generate_keypair() -> Result<(MlKemDecapsulationKey, MlKemEncapsulationKe
     let mut rng = rand::rngs::OsRng;
     let (dk, ek) = MlKem768::generate(&mut rng);
 
-    let dk_bytes = dk.as_bytes().to_vec();
+    let mut dk_bytes = dk.as_bytes().to_vec();
     let ek_bytes = ek.as_bytes().to_vec();
 
-    Ok((
-        MlKemDecapsulationKey(dk_bytes),
+    let result = (
+        MlKemDecapsulationKey(dk_bytes.clone()),
         MlKemEncapsulationKey(ek_bytes),
-    ))
+    );
+    // Zeroize the intermediate copy so only the wrapper holds key material
+    dk_bytes.zeroize();
+    Ok(result)
 }
 
 /// Encapsulate: produce a shared secret and ciphertext from a public key.

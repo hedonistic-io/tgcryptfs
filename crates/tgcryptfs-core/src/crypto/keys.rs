@@ -59,11 +59,16 @@ pub mod labels {
 }
 
 /// Argon2id parameters for password-based key derivation.
+///
+/// Defaults are tuned for encrypted filesystem data-at-rest protection:
+/// 256 MB memory, 4 iterations, 4 threads. This exceeds OWASP's 2023
+/// recommendations and provides strong brute-force resistance at the
+/// cost of ~1-2 second mount time on modern hardware.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Argon2Params {
-    /// Memory cost in KiB (default: 65536 = 64 MB)
+    /// Memory cost in KiB (default: 262144 = 256 MB)
     pub memory_kib: u32,
-    /// Number of iterations (default: 3)
+    /// Number of iterations (default: 4)
     pub iterations: u32,
     /// Degree of parallelism (default: 4)
     pub parallelism: u32,
@@ -74,8 +79,8 @@ pub struct Argon2Params {
 impl Default for Argon2Params {
     fn default() -> Self {
         Self {
-            memory_kib: 65536,
-            iterations: 3,
+            memory_kib: 262144,
+            iterations: 4,
             parallelism: 4,
             output_len: 32,
         }

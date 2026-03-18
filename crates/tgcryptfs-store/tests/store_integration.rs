@@ -122,7 +122,7 @@ fn snapshot_versioning() {
     // Capture snapshot (create)
     let state = log::capture_state(&file);
     let entry1 = log::create_entry(1, SnapshotOperation::Create, 2, None, Some(state), None);
-    snap_store.append_with_fixed_aad(&entry1).unwrap();
+    snap_store.append(&entry1).unwrap();
 
     // Modify the file
     let mut file2 = file.clone();
@@ -139,7 +139,7 @@ fn snapshot_versioning() {
         Some(after),
         None,
     );
-    snap_store.append_with_fixed_aad(&entry2).unwrap();
+    snap_store.append(&entry2).unwrap();
 
     let snapshots = snap_store.list_for_inode(2).unwrap();
     assert_eq!(snapshots.len(), 2);
