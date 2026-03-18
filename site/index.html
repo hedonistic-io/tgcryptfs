@@ -3,678 +3,799 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TGCryptFS - Post-Quantum Encrypted Filesystem on Telegram</title>
-<meta name="description" content="Open-source post-quantum encrypted filesystem using Telegram as unlimited cloud storage. XChaCha20-Poly1305, ML-KEM-768, FUSE mount, deadman switch.">
+<title>TGCryptFS -- Encrypted Filesystem on Telegram</title>
+<meta name="description" content="Post-quantum encrypted filesystem that uses Telegram as cloud storage. XChaCha20-Poly1305, ML-KEM-768, FUSE mount, dead man's switch. Open source, MIT licensed.">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
 :root {
-  --bg: #0a0e17;
-  --bg2: #111827;
-  --card: #1a2332;
-  --border: #2a3a4e;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --accent: #38bdf8;
-  --accent2: #818cf8;
-  --green: #34d399;
-  --orange: #fb923c;
-  --red: #f87171;
-  --font: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+  --mono: 'IBM Plex Mono', 'SF Mono', monospace;
+  --sans: 'IBM Plex Sans', -apple-system, sans-serif;
+  --bg: #0c0c0c;
+  --surface: #161616;
+  --surface2: #1e1e1e;
+  --rule: #2a2a2a;
+  --text: #d4d4d4;
+  --dim: #737373;
+  --bright: #fafafa;
+  --amber: #d97706;
+  --green: #4ade80;
+  --red: #ef4444;
+  --cyan: #22d3ee;
 }
-* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
-  line-height: 1.7;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
 }
-code, pre, .mono { font-family: var(--font); }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
 
-/* Nav */
+a { color: var(--amber); }
+a:hover { color: var(--bright); }
+code { font-family: var(--mono); font-size: 0.9em; }
+hr { border: none; border-top: 1px solid var(--rule); margin: 0; }
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 1.5rem; }
+.wide { max-width: 1060px; }
+
+/* ---- NAV ---- */
 nav {
-  position: fixed; top: 0; width: 100%; z-index: 100;
-  background: rgba(10, 14, 23, 0.9);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  padding: 0.75rem 2rem;
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(12, 12, 12, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.65rem 1.5rem;
+}
+nav .inner {
+  max-width: 860px; margin: 0 auto;
   display: flex; justify-content: space-between; align-items: center;
 }
-nav .logo { font-family: var(--font); font-weight: 700; font-size: 1.1rem; color: var(--accent); }
-nav .links { display: flex; gap: 1.5rem; }
-nav .links a { color: var(--muted); font-size: 0.9rem; }
-nav .links a:hover { color: var(--text); text-decoration: none; }
+nav .mark {
+  font-family: var(--mono); font-weight: 600; font-size: 0.95rem;
+  color: var(--bright); letter-spacing: -0.02em;
+}
+nav .mark span { color: var(--amber); }
+nav .links { display: flex; gap: 1.25rem; }
+nav .links a {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--dim);
+  text-decoration: none; letter-spacing: 0.01em;
+}
+nav .links a:hover { color: var(--text); }
 
-/* Hero */
+/* ---- HERO ---- */
 .hero {
-  padding: 8rem 2rem 4rem;
-  text-align: center;
-  background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+  padding: 6rem 0 4rem;
+  border-bottom: 1px solid var(--rule);
 }
 .hero h1 {
-  font-size: 3.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 1rem;
-}
-.hero .tagline {
-  font-size: 1.3rem;
-  color: var(--muted);
-  max-width: 700px;
-  margin: 0 auto 2rem;
-}
-.hero .badges { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
-.badge {
-  display: inline-block;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-family: var(--font);
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-.badge.green { border-color: var(--green); color: var(--green); }
-.badge.blue { border-color: var(--accent); color: var(--accent); }
-.badge.purple { border-color: var(--accent2); color: var(--accent2); }
-.cta-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-.cta {
-  display: inline-block;
-  padding: 0.75rem 2rem;
-  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 2.1rem;
   font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.2s;
+  color: var(--bright);
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  margin-bottom: 1.5rem;
 }
-.cta-primary { background: var(--accent); color: var(--bg); }
-.cta-primary:hover { background: #7dd3fc; text-decoration: none; }
-.cta-secondary { border: 1px solid var(--border); color: var(--text); }
-.cta-secondary:hover { border-color: var(--accent); text-decoration: none; }
-
-/* Install block */
-.install-block {
+.hero h1 .v { color: var(--dim); font-weight: 400; font-size: 0.65em; }
+.hero .lead {
+  font-size: 1.1rem;
+  color: var(--text);
   max-width: 600px;
-  margin: 2rem auto 0;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem 1.5rem;
-  font-family: var(--font);
-  font-size: 0.9rem;
-  color: var(--green);
-  text-align: left;
+  margin-bottom: 2rem;
 }
-.install-block .comment { color: var(--muted); }
+.hero .lead strong { color: var(--bright); font-weight: 500; }
+.hero .meta {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--dim);
+  display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2.5rem;
+}
+.hero .meta a { color: var(--dim); text-decoration: none; }
+.hero .meta a:hover { color: var(--amber); }
 
-/* Sections */
-section { padding: 5rem 2rem; }
-.container { max-width: 1100px; margin: 0 auto; }
-section h2 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  text-align: center;
+/* ---- TERMINAL ---- */
+.term {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 2rem 0;
 }
-section .subtitle {
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 3rem;
-  font-size: 1.05rem;
+.term-bar {
+  background: var(--surface2);
+  padding: 0.5rem 0.85rem;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--dim);
+  display: flex; align-items: center; gap: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  user-select: none;
 }
-
-/* Feature grid */
-.features { background: var(--bg2); }
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
+.term-dots { display: flex; gap: 5px; margin-right: 0.5rem; }
+.term-dots i {
+  width: 10px; height: 10px; border-radius: 50%;
+  display: block; background: var(--rule);
 }
-.feature-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-.feature-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
-.feature-card .tag {
-  font-family: var(--font);
-  font-size: 0.7rem;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
-}
-.feature-card p { color: var(--muted); font-size: 0.95rem; }
-
-/* Crypto table */
-.crypto-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-  font-size: 0.95rem;
-}
-.crypto-table th {
-  text-align: left;
-  padding: 0.75rem 1rem;
-  background: var(--card);
-  border-bottom: 2px solid var(--accent);
-  font-weight: 600;
-}
-.crypto-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--muted);
-}
-.crypto-table td:first-child { color: var(--text); font-family: var(--font); font-size: 0.85rem; }
-
-/* Architecture */
-.arch-diagram {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 2rem;
-  font-family: var(--font);
-  font-size: 0.8rem;
-  line-height: 1.5;
+.term-body {
+  padding: 1rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.7;
   overflow-x: auto;
   white-space: pre;
-  color: var(--muted);
-  max-width: 900px;
-  margin: 0 auto;
+  color: var(--dim);
 }
-.arch-diagram .hl { color: var(--accent); }
-.arch-diagram .gr { color: var(--green); }
-.arch-diagram .or { color: var(--orange); }
+.term-body .prompt { color: var(--amber); }
+.term-body .cmd { color: var(--bright); }
+.term-body .out { color: var(--text); }
+.term-body .ok { color: var(--green); }
+.term-body .comment { color: #525252; font-style: italic; }
+.term-body .flag { color: var(--cyan); }
 
-/* Roadmap */
-.roadmap-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-.roadmap-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-.roadmap-card .phase {
-  font-family: var(--font);
-  font-size: 0.75rem;
+/* ---- SECTIONS ---- */
+section { padding: 4rem 0; }
+section + section { border-top: 1px solid var(--rule); }
+.sh {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  margin-bottom: 0.75rem;
 }
-.roadmap-card .phase.done { color: var(--green); }
-.roadmap-card .phase.current { color: var(--orange); }
-.roadmap-card .phase.next { color: var(--accent2); }
-.roadmap-card .phase.future { color: var(--muted); }
-.roadmap-card h3 { margin-bottom: 0.5rem; }
-.roadmap-card ul { color: var(--muted); padding-left: 1.2rem; font-size: 0.9rem; }
-.roadmap-card li { margin-bottom: 0.25rem; }
+section h2 {
+  font-family: var(--sans);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--bright);
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+section p.desc {
+  color: var(--text);
+  max-width: 600px;
+  margin-bottom: 2rem;
+}
 
-/* Contribute */
-.contribute { background: var(--bg2); }
-.contribute-steps {
+/* ---- IDEA (why it exists) ---- */
+.idea-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  margin-top: 2rem;
 }
-.step {
-  text-align: center;
-  padding: 1.5rem;
+.idea-cols p { color: var(--text); font-size: 0.95rem; }
+.idea-cols p + p { margin-top: 0.75rem; }
+.idea-cols .label {
+  font-family: var(--mono); font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--dim); margin-bottom: 0.5rem;
 }
-.step .num {
-  font-family: var(--font);
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--accent);
-  margin-bottom: 0.5rem;
-}
-.step h3 { margin-bottom: 0.5rem; }
-.step p { color: var(--muted); font-size: 0.9rem; }
 
-/* Footer */
-footer {
-  padding: 3rem 2rem;
-  text-align: center;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
+/* ---- CRYPTO TABLE ---- */
+.crypto-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 1.5rem 0;
+}
+.crypto-tbl th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.crypto-tbl td {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.crypto-tbl td:first-child {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--bright);
+  white-space: nowrap;
+  padding-right: 2rem;
+  width: 200px;
+}
+.crypto-tbl td:nth-child(2) { color: var(--text); padding-right: 1.5rem; }
+.crypto-tbl td:last-child { color: var(--dim); }
+
+/* ---- ARCH ---- */
+.arch-pre {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--dim);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1.5rem;
+  overflow-x: auto;
+  white-space: pre;
+}
+.arch-pre .hi { color: var(--bright); }
+.arch-pre .am { color: var(--amber); }
+.arch-pre .gn { color: var(--green); }
+
+/* ---- INSTALL ---- */
+.install-methods {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+.install-opt {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 1rem;
+  align-items: baseline;
+}
+.install-opt:last-child { border-bottom: none; }
+.install-opt .opt-label {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--dim);
+}
+.install-opt code {
+  background: var(--surface);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.82rem;
+  color: var(--green);
+  display: inline-block;
+  word-break: break-all;
+}
+.install-opt .note { font-size: 0.85rem; color: var(--dim); margin-top: 0.25rem; }
+
+/* ---- PLATFORM ---- */
+.plat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+.plat-cell {
+  padding: 1rem;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
   font-size: 0.85rem;
 }
-footer a { color: var(--accent); }
+.plat-cell:nth-child(5n) { border-right: none; }
+.plat-cell:nth-last-child(-n+5) { border-bottom: none; }
+.plat-cell.hd {
+  background: var(--surface);
+  font-family: var(--mono); font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--dim);
+}
+.plat-cell .y { color: var(--green); }
+.plat-cell .e { color: var(--amber); }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .hero h1 { font-size: 2.2rem; }
-  .hero .tagline { font-size: 1.1rem; }
-  nav { padding: 0.75rem 1rem; }
-  section { padding: 3rem 1rem; }
+/* ---- DOCS ---- */
+.doc-list { list-style: none; padding: 0; }
+.doc-list li {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.75rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+.doc-list li:last-child { border-bottom: none; }
+.doc-list .doc-title {
+  font-weight: 500;
+  color: var(--bright);
+}
+.doc-list .doc-title a { color: var(--bright); text-decoration: none; }
+.doc-list .doc-title a:hover { color: var(--amber); }
+.doc-list .doc-desc { color: var(--dim); font-size: 0.85rem; text-align: right; }
+
+/* ---- KEY HIERARCHY DIAGRAM ---- */
+.kh-diagram {
+  font-family: var(--mono); font-size: 0.78rem; line-height: 1.6;
+  color: var(--dim);
+  margin: 1.5rem 0;
+  white-space: pre;
+  overflow-x: auto;
+}
+.kh-diagram .am { color: var(--amber); }
+.kh-diagram .gn { color: var(--green); }
+.kh-diagram .br { color: var(--bright); }
+
+/* ---- FOOTER ---- */
+footer {
+  padding: 3rem 0;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--dim);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+footer a { color: var(--dim); text-decoration: none; }
+footer a:hover { color: var(--amber); }
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 700px) {
+  .hero h1 { font-size: 1.6rem; }
+  .hero .meta { flex-direction: column; gap: 0.5rem; }
+  .idea-cols { grid-template-columns: 1fr; gap: 1.5rem; }
+  .install-opt { grid-template-columns: 1fr; }
+  .plat-grid { grid-template-columns: repeat(3, 1fr); }
+  .plat-cell:nth-child(5n) { border-right: 1px solid var(--rule); }
+  .plat-cell:nth-child(3n) { border-right: none; }
+  footer { flex-direction: column; }
+  nav .links { gap: 0.75rem; }
+  nav .links a { font-size: 0.72rem; }
 }
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="logo">tgcryptfs</div>
-  <div class="links">
-    <a href="#features">Features</a>
-    <a href="#security">Security</a>
-    <a href="#install">Install</a>
-    <a href="#architecture">Architecture</a>
-    <a href="#docs">Docs</a>
-    <a href="#roadmap">Roadmap</a>
-    <a href="https://github.com/hedonistic-io/tgcryptfs">GitHub</a>
+  <div class="inner">
+    <div class="mark"><span>tg</span>cryptfs</div>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <a href="#crypto">Crypto</a>
+      <a href="#install">Install</a>
+      <a href="#docs">Docs</a>
+      <a href="https://github.com/hedonistic-io/tgcryptfs">Source</a>
+    </div>
   </div>
 </nav>
 
-<!-- Hero -->
+<!-- ============================================================ -->
+<!-- HERO -->
+<!-- ============================================================ -->
 <section class="hero">
-  <h1>TGCryptFS</h1>
-  <p class="tagline">
-    Post-quantum encrypted filesystem that turns Telegram into unlimited, zero-knowledge cloud storage.
-    Open source. Built in Rust. 471 tests.
+<div class="wrap">
+  <h1>tgcryptfs <span class="v">v0.1.0</span></h1>
+  <p class="lead">
+    An encrypted filesystem that stores its blocks in Telegram.
+    You see a mounted directory. Telegram sees noise.
+    <strong>XChaCha20-Poly1305 + ML-KEM-768.</strong>
+    FUSE. Dead man's switch. 22-word recovery. 471 tests.
   </p>
-  <div class="badges">
-    <span class="badge green">MIT License</span>
-    <span class="badge blue">Rust 1.75+</span>
-    <span class="badge purple">Post-Quantum Ready</span>
-    <span class="badge">v0.1.0</span>
+  <div class="meta">
+    <span>MIT licensed</span>
+    <span>Rust, MSRV 1.75</span>
+    <span>Linux + macOS</span>
+    <a href="https://github.com/hedonistic-io/tgcryptfs">github.com/hedonistic-io/tgcryptfs</a>
   </div>
-  <div class="cta-group">
-    <a href="https://github.com/hedonistic-io/tgcryptfs" class="cta cta-primary">View on GitHub</a>
-    <a href="#quickstart" class="cta cta-secondary">Quick Start</a>
+
+  <div class="term">
+    <div class="term-bar">
+      <div class="term-dots"><i></i><i></i><i></i></div>
+      bash -- 80x24
+    </div>
+    <div class="term-body"><span class="comment">  # install</span>
+<span class="prompt">$</span> <span class="cmd">curl -fsSL https://raw.githubusercontent.com/hedonistic-io/tgcryptfs/main/scripts/install.sh | bash</span>
+<span class="out">  [ok]  Detected: macOS aarch64</span>
+<span class="out">  [ok]  FUSE: macFUSE 4.x found</span>
+<span class="out">  [ok]  Downloaded tgcryptfs v0.1.0 (SHA-256 verified)</span>
+<span class="out">  [ok]  Installed to /usr/local/bin/tgcryptfs</span>
+
+<span class="comment">  # set up telegram credentials (2 minutes, one time)</span>
+<span class="prompt">$</span> <span class="cmd">./scripts/setup-telegram.sh</span>
+<span class="out">  Opening https://my.telegram.org ...</span>
+<span class="out">  Enter your API ID: </span><span class="cmd">39223262</span>
+<span class="out">  Enter your API Hash: </span><span class="cmd">********************************</span>
+<span class="ok">  Credentials written to ~/.config/tgcryptfs/.env</span>
+
+<span class="comment">  # authenticate with telegram</span>
+<span class="prompt">$</span> <span class="cmd">tgcryptfs auth login</span>
+<span class="ok">  Authenticated as +1********67</span>
+
+<span class="comment">  # create an encrypted volume, mount it, use it</span>
+<span class="prompt">$</span> <span class="cmd">tgcryptfs volume create</span> <span class="flag">--name</span> <span class="cmd">work</span>
+<span class="out">  Volume "work" created (256-bit root key, Argon2id KDF)</span>
+<span class="out">  Sentence reference: <span class="ok">album bright castle dawn ember frost gate...</span></span>
+<span class="prompt">$</span> <span class="cmd">tgcryptfs volume mount work ~/secure</span>
+<span class="ok">  Mounted at ~/secure</span>
+<span class="prompt">$</span> <span class="cmd">cp ~/taxes-2025.pdf ~/secure/</span>
+<span class="prompt">$</span> <span class="cmd">ls ~/secure/</span>
+<span class="out">  taxes-2025.pdf</span>
+<span class="prompt">$</span> <span class="cmd">tgcryptfs volume unmount ~/secure</span>
+<span class="ok">  Unmounted</span></div>
   </div>
-  <div class="install-block" id="quickstart">
-    <span class="comment"># Install (Linux and macOS)</span><br>
-    curl -fsSL https://raw.githubusercontent.com/hedonistic-io/tgcryptfs/main/scripts/install.sh | bash<br><br>
-    <span class="comment"># Set up Telegram API credentials</span><br>
-    tgcryptfs configure<br><br>
-    <span class="comment"># Create and mount your first encrypted volume</span><br>
-    tgcryptfs volume create --name my-vault<br>
-    tgcryptfs volume mount my-vault ~/secure
-  </div>
+
+</div>
 </section>
 
-<!-- Features -->
-<section class="features" id="features">
-  <div class="container">
-    <h2>Features</h2>
-    <p class="subtitle">Military-grade encryption meets unlimited cloud storage</p>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="tag">Encryption</div>
-        <h3>Post-Quantum Cryptography</h3>
-        <p>XChaCha20-Poly1305 for symmetric encryption. ML-KEM-768 (FIPS 203) for key exchange. Your data is protected against both classical and quantum adversaries.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Storage</div>
-        <h3>Unlimited Telegram Backend</h3>
-        <p>Files are encrypted, chunked, and stored as messages in your Telegram Saved Messages. No storage limits. No monthly fees. Your data, your account.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Transparency</div>
-        <h3>FUSE Filesystem Mount</h3>
-        <p>Mount encrypted volumes as regular directories. Every application works seamlessly &mdash; editors, media players, scripts. No API needed.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Privacy</div>
-        <h3>Opaque Database Schema</h3>
-        <p>SQLite metadata uses BLAKE3-derived table and column names. Stolen databases reveal zero structural information without the schema key.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Sharing</div>
-        <h3>Multi-User Access Control</h3>
-        <p>Share volumes with other users via ML-KEM key wrapping. Granular permissions (Read, Write, Admin). Time-limited invite tokens with revocation.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Safety</div>
-        <h3>Deadman Switch</h3>
-        <p>Configurable triggers that auto-destroy all data: heartbeat timeouts, network checks, OS events. If you can't check in, your data disappears.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Efficiency</div>
-        <h3>Content Deduplication</h3>
-        <p>Content-defined chunking with BLAKE3 hashing enables block-level deduplication. Store the same data once, reference it everywhere.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Recovery</div>
-        <h3>22-Word Sentence Reference</h3>
-        <p>Back up your 256-bit root key as 22 human-readable words. Write them down. Store them in a safe. Recover your entire volume from memory.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Security</div>
-        <h3>Forward Secrecy</h3>
-        <p>Epoch-based key rotation derives fresh encryption keys per epoch. When you rotate, old keys are zeroized. Past data becomes unrecoverable even with the root key.</p>
-      </div>
+<!-- ============================================================ -->
+<!-- HOW IT WORKS -->
+<!-- ============================================================ -->
+<section id="how">
+<div class="wrap">
+  <div class="sh">How it works</div>
+  <h2>The problem is simple</h2>
+  <p class="desc">
+    You want encrypted cloud storage you actually control. Not a third-party
+    service that holds your keys. Not a local drive that dies when your
+    hardware does. Something that looks like a normal folder but is
+    actually ciphertext scattered across the cloud.
+  </p>
+
+  <div class="idea-cols">
+    <div>
+      <div class="label">What you do</div>
+      <p>
+        Mount a volume. Copy files into it. They show up as a normal
+        directory. Edit them with any application. Unmount when you're done.
+      </p>
+      <p>
+        Optionally, start the REST API server and control everything
+        programmatically. 21 endpoints. Bearer token auth.
+      </p>
+    </div>
+    <div>
+      <div class="label">What tgcryptfs does</div>
+      <p>
+        Encrypts every file with XChaCha20-Poly1305 using keys derived from
+        your password through Argon2id. Splits the ciphertext into
+        content-defined chunks. Deduplicates. Uploads the chunks to your
+        Telegram account as opaque blocks.
+      </p>
+      <p>
+        The metadata database uses BLAKE3-derived names for every table and
+        column. If someone steals the SQLite file, they can't even tell what
+        the schema is without the key.
+      </p>
     </div>
   </div>
-</section>
 
-<!-- Security / Crypto -->
-<section id="security">
-  <div class="container">
-    <h2>Cryptographic Foundation</h2>
-    <p class="subtitle">Every layer is encrypted with purpose-specific keys and contextual authentication</p>
-    <table class="crypto-table">
-      <thead>
-        <tr><th>Primitive</th><th>Algorithm</th><th>Purpose</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>AEAD</td><td>XChaCha20-Poly1305</td><td>Authenticated encryption for all data and metadata</td></tr>
-        <tr><td>KDF</td><td>Argon2id (64MB, 3 iter, 4 threads)</td><td>Password-to-key derivation with memory-hard resistance</td></tr>
-        <tr><td>Key Hierarchy</td><td>HKDF-SHA256</td><td>Derives 6 purpose-specific keys from root</td></tr>
-        <tr><td>Content Hash</td><td>BLAKE3</td><td>Content-addressable dedup and integrity verification</td></tr>
-        <tr><td>Post-Quantum KEM</td><td>ML-KEM-768 (FIPS 203)</td><td>Quantum-resistant key encapsulation for sharing</td></tr>
-        <tr><td>Schema Obfuscation</td><td>BLAKE3 keyed hash</td><td>Deterministic opaque table/column name derivation</td></tr>
-      </tbody>
-    </table>
-
-    <br><br>
-    <h3 style="text-align:center; margin-bottom: 1rem;">Key Hierarchy</h3>
-    <div class="arch-diagram" style="text-align: center;">
-          Password + Salt
-               |
-          <span class="or">Argon2id</span>
-               |
-           <span class="hl">K_root</span> (256-bit)
-               |
-          <span class="or">HKDF-SHA256</span>
-          _____|______________________
-         |      |      |      |      |      |
-       <span class="gr">K_data</span>  <span class="gr">K_meta</span> <span class="gr">K_schema</span> <span class="gr">K_ih</span>  <span class="gr">K_wrap</span> <span class="gr">K_deadman</span>
-       files  inodes  tables  BLAKE3 sharing audit
-    </div>
-
-    <br><br>
-    <h3 style="text-align:center; margin-bottom: 1rem;">AAD Binding</h3>
-    <p style="text-align:center; color: var(--muted); max-width: 700px; margin: 0 auto 1rem;">
-      Every ciphertext is bound to its context via Additional Authenticated Data.
-      A block encrypted for file 42 at offset 0 cannot be moved to file 43 or offset 1024 &mdash;
-      the authentication tag will fail. This prevents replay, reorder, and substitution attacks.
+  <div style="margin-top:2.5rem;">
+    <div class="label" style="font-family:var(--mono);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim);margin-bottom:0.75rem;">And if something goes wrong</div>
+    <p style="max-width:600px;color:var(--text);font-size:0.95rem;">
+      The dead man's switch monitors for check-ins. If you stop responding --
+      because you can't, or because you choose not to -- it destroys the
+      volume. Configurable triggers, configurable delay. The data doesn't
+      wait around for someone else to find it.
     </p>
-    <table class="crypto-table" style="max-width:700px; margin: 0 auto;">
-      <thead><tr><th>Context</th><th>AAD Format</th></tr></thead>
-      <tbody>
-        <tr><td>File block</td><td>inode:{ino}:block:{offset}</td></tr>
-        <tr><td>Inode metadata</td><td>inode:{ino}</td></tr>
-        <tr><td>Policy</td><td>policy:{pid}</td></tr>
-        <tr><td>Volume config</td><td>volume:{volume_id}</td></tr>
-        <tr><td>Snapshot</td><td>snapshot:{snapshot_id}</td></tr>
-      </tbody>
-    </table>
   </div>
+</div>
 </section>
 
-<!-- Install -->
-<section id="install">
-  <div class="container">
-    <h2>Installation</h2>
-    <p class="subtitle">Three ways to get started, on any platform</p>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="tag">Recommended</div>
-        <h3>Install Script</h3>
-        <p>One-line installer for Linux and macOS. Auto-detects your OS and architecture, installs FUSE dependencies, downloads the latest release with SHA-256 verification, and sets up shell completions.</p>
-        <pre style="margin-top:1rem; background:var(--bg); padding:0.75rem; border-radius:6px; font-size:0.8rem; color:var(--green); overflow-x:auto;">curl -fsSL https://raw.githubusercontent.com/hedonistic-io/tgcryptfs/main/scripts/install.sh | bash</pre>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Rust Users</div>
-        <h3>Cargo Install</h3>
-        <p>If you have a Rust toolchain (1.75+), install directly from source via Cargo. Requires FUSE development headers on your system.</p>
-        <pre style="margin-top:1rem; background:var(--bg); padding:0.75rem; border-radius:6px; font-size:0.8rem; color:var(--green); overflow-x:auto;">cargo install tgcryptfs-cli</pre>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Build from Source</div>
-        <h3>Clone and Build</h3>
-        <p>Full control. Clone the repo, build with cargo, run the test suite. A build script checks prerequisites and handles platform-specific setup.</p>
-        <pre style="margin-top:1rem; background:var(--bg); padding:0.75rem; border-radius:6px; font-size:0.8rem; color:var(--green); overflow-x:auto;">git clone https://github.com/hedonistic-io/tgcryptfs.git
-cd tgcryptfs && ./scripts/build.sh --install</pre>
-      </div>
-    </div>
-    <div style="margin-top:2rem;">
-      <h3 style="text-align:center; margin-bottom:1rem;">Platform Support</h3>
-      <table class="crypto-table" style="max-width:800px; margin:0 auto;">
-        <thead><tr><th>Platform</th><th>Install Methods</th><th>FUSE</th><th>API Server</th><th>Notes</th></tr></thead>
-        <tbody>
-          <tr><td>Linux x86_64</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>libfuse3-dev or fuse3</td></tr>
-          <tr><td>Linux aarch64</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>libfuse3-dev or fuse3</td></tr>
-          <tr><td>macOS Intel</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>macFUSE required</td></tr>
-          <tr><td>macOS Apple Silicon</td><td>Script, cargo, source</td><td style="color:var(--green);">Yes</td><td style="color:var(--green);">Yes</td><td>macFUSE required</td></tr>
-          <tr><td>Windows</td><td>Source only</td><td style="color:var(--orange);">Experimental</td><td style="color:var(--green);">Yes</td><td>WinFsp required</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<!-- Docs -->
-<section class="features" id="docs">
-  <div class="container">
-    <h2>Documentation</h2>
-    <p class="subtitle">Everything you need from first install to production deployment</p>
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="tag">Start Here</div>
-        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/GETTING_STARTED.md">Getting Started</a></h3>
-        <p>Installation, Telegram setup, your first encrypted volume, mounting, and basic operations. The complete first-run walkthrough.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Setup</div>
-        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/TELEGRAM_SETUP.md">Telegram API Setup</a></h3>
-        <p>Step-by-step guide to obtaining your Telegram API credentials. Includes the automated setup script and manual configuration options.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Reference</div>
-        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/CLI_REFERENCE.md">CLI Reference</a></h3>
-        <p>Complete command-line documentation for all 9 subcommands: auth, volume, deadman, configure, status, key, share, serve, and completions.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Reference</div>
-        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/API_REFERENCE.md">REST API Reference</a></h3>
-        <p>All 21 endpoints documented with request/response formats, authentication, and error codes. Bearer token auth and CORS configuration.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Deep Dive</div>
-        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SECURITY.md">Security Model</a></h3>
-        <p>Threat model, cryptographic design, key hierarchy, schema obfuscation, and forward secrecy. How TGCryptFS protects your data.</p>
-      </div>
-      <div class="feature-card">
-        <div class="tag">Guide</div>
-        <h3><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/USER_GUIDE.md">User Guide</a></h3>
-        <p>Day-to-day usage: mounting, sharing volumes, key management, dead man's switch configuration, running as a system service.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Architecture -->
-<section id="architecture">
-  <div class="container">
-    <h2>Architecture</h2>
-    <p class="subtitle">9 focused crates. Pure separation of concerns. Zero I/O in the crypto layer.</p>
-    <div class="arch-diagram">
-<span class="hl">tgcryptfs-cli</span>              Command-line interface
-       |
-<span class="hl">tgcryptfs-api</span>              Service orchestration (Volume, Auth, System)
-       |
-   ____|____________________
-  |         |         |         |
-<span class="gr">tgcryptfs</span>  <span class="gr">tgcryptfs</span>  <span class="gr">tgcryptfs</span>  <span class="gr">tgcryptfs</span>
-<span class="gr">-fuse</span>      <span class="gr">-telegram</span>  <span class="gr">-sharing</span>   <span class="gr">-deadman</span>
-FUSE ops   MTProto    ML-KEM     Triggers
-  |         client     keys       destruct
-  |         |         |         |
-  |_________|_________|_________|
-              |
-<span class="or">tgcryptfs-store</span>            Encrypted SQLite with opaque schema
-              |
-<span class="or">tgcryptfs-cache</span>            LRU block cache with at-rest encryption
-              |
-<span class="hl">tgcryptfs-core</span>             Pure crypto, blocks, metadata, policy
-                           <span class="muted">(no I/O, no network, no filesystem)</span>
-    </div>
-  </div>
-</section>
-
-<!-- Roadmap -->
-<section id="roadmap">
-  <div class="container">
-    <h2>Roadmap</h2>
-    <p class="subtitle">Where we've been and where we're going</p>
-    <div class="roadmap-grid">
-      <div class="roadmap-card">
-        <div class="phase done">Phase 1 - Complete</div>
-        <h3>Core Engine</h3>
-        <ul>
-          <li>XChaCha20-Poly1305 AEAD</li>
-          <li>Argon2id + HKDF key hierarchy</li>
-          <li>SRB1 block format</li>
-          <li>Content-defined chunking</li>
-          <li>BLAKE3 deduplication</li>
-          <li>Epoch-based forward secrecy</li>
-          <li>Opaque SQLite schema</li>
-          <li>471 unit, integration, and property-based tests</li>
-        </ul>
-      </div>
-      <div class="roadmap-card">
-        <div class="phase done">Phase 2 - Complete</div>
-        <h3>Platform Layer</h3>
-        <ul>
-          <li>FUSE filesystem (full POSIX ops)</li>
-          <li>Telegram MTProto client</li>
-          <li>Encrypted block cache</li>
-          <li>ML-KEM sharing system</li>
-          <li>Deadman switch subsystem</li>
-          <li>CLI with interactive setup</li>
-          <li>CI/CD and cross-platform builds</li>
-        </ul>
-      </div>
-      <div class="roadmap-card">
-        <div class="phase done">v0.1.0 - Complete</div>
-        <h3>Production Hardening</h3>
-        <ul>
-          <li>REST API server (21 endpoints)</li>
-          <li>Bearer token authentication</li>
-          <li>Volume session manager</li>
-          <li>Security hardening (zeroization, auth, CORS)</li>
-          <li>Property-based testing (proptest)</li>
-          <li>Shell completions (bash, zsh, fish)</li>
-          <li>Multi-platform CI/CD and release automation</li>
-          <li>471 tests passing</li>
-        </ul>
-      </div>
-      <div class="roadmap-card">
-        <div class="phase current">Next - In Progress</div>
-        <h3>Multi-Platform &amp; UX</h3>
-        <ul>
-          <li>GUI application (Tauri or egui)</li>
-          <li>System tray integration</li>
-          <li>Mobile companion app</li>
-          <li>Selective sync (partial mount)</li>
-          <li>Bandwidth throttling controls</li>
-          <li>Conflict resolution for shared volumes</li>
-        </ul>
-      </div>
-      <div class="roadmap-card">
-        <div class="phase future">Phase 5 - Future</div>
-        <h3>Ecosystem</h3>
-        <ul>
-          <li>Plugin system for custom backends</li>
-          <li>Alternative storage backends (S3, IPFS)</li>
-          <li>Web-based file browser</li>
-          <li>Team management dashboard</li>
-          <li>Audit log export and compliance</li>
-          <li>Hardware key support (YubiKey)</li>
-        </ul>
-      </div>
-      <div class="roadmap-card">
-        <div class="phase future">Phase 6 - Vision</div>
-        <h3>Decentralized</h3>
-        <ul>
-          <li>Multi-backend redundancy</li>
-          <li>Erasure coding across providers</li>
-          <li>Threshold secret sharing for keys</li>
-          <li>Decentralized identity (DID) integration</li>
-          <li>Zero-knowledge proof of storage</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Contribute -->
-<section class="contribute" id="contribute">
-  <div class="container">
-    <h2>Contribute</h2>
-    <p class="subtitle">TGCryptFS is open source and we welcome contributions of all kinds</p>
-    <div class="contribute-steps">
-      <div class="step">
-        <div class="num">01</div>
-        <h3>Fork & Clone</h3>
-        <p>Fork the repo, clone locally, and run <code>cargo test</code> to verify your setup.</p>
-      </div>
-      <div class="step">
-        <div class="num">02</div>
-        <h3>Pick an Issue</h3>
-        <p>Check open issues labeled <code>good first issue</code> or <code>help wanted</code>. Or propose your own.</p>
-      </div>
-      <div class="step">
-        <div class="num">03</div>
-        <h3>Build & Test</h3>
-        <p>Write your code, add tests, run <code>make ci</code> to verify formatting, linting, and all 471 tests.</p>
-      </div>
-      <div class="step">
-        <div class="num">04</div>
-        <h3>Open a PR</h3>
-        <p>Push to your fork and open a pull request. We review promptly and provide constructive feedback.</p>
-      </div>
-    </div>
-    <br>
-    <div style="text-align:center">
-      <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CONTRIBUTING.md" class="cta cta-secondary">Read Contribution Guide</a>
-    </div>
-  </div>
-</section>
-
-<!-- Stats -->
-<section>
-  <div class="container" style="text-align:center">
-    <div style="display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap;">
-      <div>
-        <div style="font-size: 2.5rem; font-weight: 800; color: var(--accent); font-family: var(--font);">9</div>
-        <div style="color: var(--muted); font-size: 0.9rem;">Rust Crates</div>
-      </div>
-      <div>
-        <div style="font-size: 2.5rem; font-weight: 800; color: var(--green); font-family: var(--font);">471</div>
-        <div style="color: var(--muted); font-size: 0.9rem;">Tests</div>
-      </div>
-      <div>
-        <div style="font-size: 2.5rem; font-weight: 800; color: var(--accent2); font-family: var(--font);">11k</div>
-        <div style="color: var(--muted); font-size: 0.9rem;">Lines of Rust</div>
-      </div>
-      <div>
-        <div style="font-size: 2.5rem; font-weight: 800; color: var(--orange); font-family: var(--font);">0</div>
-        <div style="color: var(--muted); font-size: 0.9rem;">Clippy Warnings</div>
-      </div>
-      <div>
-        <div style="font-size: 2.5rem; font-weight: 800; color: var(--red); font-family: var(--font);">5.2</div>
-        <div style="color: var(--muted); font-size: 0.9rem;">MB Binary</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <p>
-    TGCryptFS is open source under the <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/LICENSE">MIT License</a>.
-    <br>
-    <a href="https://github.com/hedonistic-io/tgcryptfs">GitHub</a> &middot;
-    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CONTRIBUTING.md">Contribute</a> &middot;
-    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SECURITY.md">Security</a> &middot;
-    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CHANGELOG.md">Changelog</a>
+<!-- ============================================================ -->
+<!-- CRYPTO -->
+<!-- ============================================================ -->
+<section id="crypto">
+<div class="wrap">
+  <div class="sh">Cryptography</div>
+  <h2>Nothing novel, nothing clever</h2>
+  <p class="desc">
+    We didn't invent any primitives. Every choice is a well-studied,
+    conservative selection. The only unusual part is ML-KEM-768 for
+    post-quantum key exchange during sharing -- and that's NIST FIPS 203,
+    not some academic prototype.
   </p>
+
+  <table class="crypto-tbl">
+    <thead>
+      <tr><th>Primitive</th><th>Algorithm</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>AEAD</td>
+        <td>XChaCha20-Poly1305</td>
+        <td>Encrypts and authenticates every block and metadata record</td>
+      </tr>
+      <tr>
+        <td>Password KDF</td>
+        <td>Argon2id</td>
+        <td>Derives root key from your password (64 MB, 3 iterations)</td>
+      </tr>
+      <tr>
+        <td>Key hierarchy</td>
+        <td>HKDF-SHA256</td>
+        <td>Derives 6 purpose-specific subkeys from root</td>
+      </tr>
+      <tr>
+        <td>Content hash</td>
+        <td>BLAKE3</td>
+        <td>Block identity, deduplication, integrity</td>
+      </tr>
+      <tr>
+        <td>Post-quantum KEM</td>
+        <td>ML-KEM-768</td>
+        <td>Key encapsulation when sharing volumes between users</td>
+      </tr>
+      <tr>
+        <td>Schema obfuscation</td>
+        <td>BLAKE3 keyed hash</td>
+        <td>Derives all SQLite table/column/index names from a schema key</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="kh-diagram">
+    <span class="am">Password</span> + Salt
+         |
+    <span class="am">Argon2id</span> (64 MB, t=3, p=4)
+         |
+     <span class="br">K_root</span> ---- 256-bit master key
+         |
+    <span class="am">HKDF-SHA256</span> with domain separation
+     ____|________________________________________
+    |        |         |         |        |        |
+  <span class="gn">K_data</span>   <span class="gn">K_meta</span>   <span class="gn">K_schema</span>  <span class="gn">K_ih</span>    <span class="gn">K_wrap</span>   <span class="gn">K_deadman</span>
+  encrypts encrypts  derives   integrity sharing  audit
+  files    inodes    table     hashing   key wrap logging
+                     names</div>
+
+  <p style="color:var(--dim);font-size:0.88rem;max-width:600px;margin-top:1rem;">
+    Every ciphertext is bound to its context through Additional Authenticated
+    Data. A block encrypted for inode 42 at offset 0 cannot be moved to
+    inode 43 or offset 1024 -- the Poly1305 tag will reject it. This kills
+    replay, reorder, and substitution attacks at the cryptographic level.
+  </p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ARCHITECTURE -->
+<!-- ============================================================ -->
+<section>
+<div class="wrap">
+  <div class="sh">Architecture</div>
+  <h2>Nine crates, strict layering</h2>
+  <p class="desc">
+    The crypto layer has zero I/O. The store layer knows nothing about
+    Telegram. The FUSE layer doesn't know how encryption works. Each crate
+    has a single, testable responsibility.
+  </p>
+
+  <div class="arch-pre"><span class="hi">tgcryptfs-cli</span>              9 subcommands, clap, shell completions
+       |
+<span class="hi">tgcryptfs-api</span>              21 REST endpoints, Axum, bearer auth
+       |
+   ____|____________________________
+  |           |          |          |
+<span class="gn">tgcryptfs</span>  <span class="gn">tgcryptfs</span>  <span class="gn">tgcryptfs</span>  <span class="gn">tgcryptfs</span>
+<span class="gn">  -fuse</span>     <span class="gn">-telegram</span>  <span class="gn">-sharing</span>   <span class="gn">-deadman</span>
+ FUSE ops   MTProto    ML-KEM     triggers,
+ via fuser  client     key wrap   destruction
+  |           |          |          |
+  |___________|__________|__________|
+              |
+<span class="am">tgcryptfs-store</span>            opaque SQLite, BLAKE3-derived schema
+              |
+<span class="am">tgcryptfs-cache</span>            encrypted LRU, at-rest encryption
+              |
+<span class="hi">tgcryptfs-core</span>             pure crypto. no I/O. no network. no fs.
+                           this is where the math lives.</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- INSTALL -->
+<!-- ============================================================ -->
+<section id="install">
+<div class="wrap">
+  <div class="sh">Install</div>
+  <h2>Get it running</h2>
+
+  <div class="install-methods">
+    <div class="install-opt">
+      <div class="opt-label">Script</div>
+      <div>
+        <code>curl -fsSL https://raw.githubusercontent.com/hedonistic-io/tgcryptfs/main/scripts/install.sh | bash</code>
+        <div class="note">Detects your OS and arch. Installs FUSE deps. Verifies checksums. Sets up completions.</div>
+      </div>
+    </div>
+    <div class="install-opt">
+      <div class="opt-label">Cargo</div>
+      <div>
+        <code>cargo install tgcryptfs-cli</code>
+        <div class="note">Needs Rust 1.75+ and FUSE headers (libfuse3-dev on Debian, macFUSE on macOS).</div>
+      </div>
+    </div>
+    <div class="install-opt">
+      <div class="opt-label">Source</div>
+      <div>
+        <code>git clone https://github.com/hedonistic-io/tgcryptfs && cd tgcryptfs && ./scripts/build.sh --install</code>
+        <div class="note">Checks all prerequisites, builds release binary, runs 471 tests, installs.</div>
+      </div>
+    </div>
+    <div class="install-opt">
+      <div class="opt-label">Windows</div>
+      <div>
+        <code>.\scripts\install.ps1</code>
+        <div class="note">Experimental. Requires WinFsp. FUSE support is limited on Windows.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem;">
+    <div class="label" style="font-family:var(--mono);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--dim);margin-bottom:0.75rem;">Platform matrix</div>
+    <div class="plat-grid">
+      <div class="plat-cell hd">Platform</div>
+      <div class="plat-cell hd">Methods</div>
+      <div class="plat-cell hd">FUSE</div>
+      <div class="plat-cell hd">API</div>
+      <div class="plat-cell hd">Dep</div>
+
+      <div class="plat-cell">Linux x86_64</div>
+      <div class="plat-cell">script, cargo, src</div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell">libfuse3-dev</div>
+
+      <div class="plat-cell">Linux aarch64</div>
+      <div class="plat-cell">script, cargo, src</div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell">libfuse3-dev</div>
+
+      <div class="plat-cell">macOS Intel</div>
+      <div class="plat-cell">script, cargo, src</div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell">macFUSE</div>
+
+      <div class="plat-cell">macOS ARM</div>
+      <div class="plat-cell">script, cargo, src</div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell">macFUSE</div>
+
+      <div class="plat-cell">Windows</div>
+      <div class="plat-cell">source only</div>
+      <div class="plat-cell"><span class="e">exp.</span></div>
+      <div class="plat-cell"><span class="y">yes</span></div>
+      <div class="plat-cell">WinFsp</div>
+    </div>
+  </div>
+
+  <p style="margin-top:1.5rem;font-size:0.88rem;">
+    After installing, you need Telegram API credentials.
+    Run <code>./scripts/setup-telegram.sh</code> or follow the
+    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/TELEGRAM_SETUP.md">manual setup guide</a>.
+    It takes about two minutes.
+  </p>
+
+  <p style="margin-top:1rem;font-size:0.88rem;">
+    Service files for systemd and launchd are in
+    <a href="https://github.com/hedonistic-io/tgcryptfs/tree/main/system"><code>system/</code></a>
+    if you want the API server or dead man's check-in running as a
+    background service.
+  </p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- DOCS -->
+<!-- ============================================================ -->
+<section id="docs">
+<div class="wrap">
+  <div class="sh">Documentation</div>
+  <h2>Read the docs</h2>
+
+  <ul class="doc-list">
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/GETTING_STARTED.md">Getting Started</a></span>
+      <span class="doc-desc">Install, authenticate, create a volume, mount it</span>
+    </li>
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/TELEGRAM_SETUP.md">Telegram Setup</a></span>
+      <span class="doc-desc">Get your API ID and hash from my.telegram.org</span>
+    </li>
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/CLI_REFERENCE.md">CLI Reference</a></span>
+      <span class="doc-desc">All 9 subcommands and their flags</span>
+    </li>
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/API_REFERENCE.md">API Reference</a></span>
+      <span class="doc-desc">21 REST endpoints, auth, error codes</span>
+    </li>
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SECURITY.md">Security Model</a></span>
+      <span class="doc-desc">Threat model, key hierarchy, forward secrecy</span>
+    </li>
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/USER_GUIDE.md">User Guide</a></span>
+      <span class="doc-desc">Sharing, key rotation, dead man's switch, services</span>
+    </li>
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/ARCHITECTURE.md">Architecture</a></span>
+      <span class="doc-desc">Crate structure, data flow, design rationale</span>
+    </li>
+    <li>
+      <span class="doc-title"><a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SentenceRefs_v1_Specification.md">Sentence Reference Spec</a></span>
+      <span class="doc-desc">22-word key backup encoding</span>
+    </li>
+  </ul>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- FEATURES (compact, not cards) -->
+<!-- ============================================================ -->
+<section>
+<div class="wrap">
+  <div class="sh">What else</div>
+  <h2>The rest of the feature list</h2>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem 3rem; margin-top:1.5rem;">
+
+    <div>
+      <h3 style="font-size:0.95rem;color:var(--bright);margin-bottom:0.25rem;">Multi-user sharing</h3>
+      <p style="font-size:0.88rem;color:var(--dim);">
+        Share volumes via ML-KEM-768 key exchange. Invite links with
+        expiration. Read/write/admin permissions. Revocation.
+      </p>
+    </div>
+
+    <div>
+      <h3 style="font-size:0.95rem;color:var(--bright);margin-bottom:0.25rem;">22-word sentence references</h3>
+      <p style="font-size:0.88rem;color:var(--dim);">
+        Your 256-bit root key encoded as 22 English words. Write them down,
+        put them in a safe. Recover any volume from those words alone.
+      </p>
+    </div>
+
+    <div>
+      <h3 style="font-size:0.95rem;color:var(--bright);margin-bottom:0.25rem;">Content-defined chunking</h3>
+      <p style="font-size:0.88rem;color:var(--dim);">
+        Rolling-hash chunk boundaries with BLAKE3 identity. Deduplication
+        across and within volumes. Change one byte, re-upload one chunk.
+      </p>
+    </div>
+
+    <div>
+      <h3 style="font-size:0.95rem;color:var(--bright);margin-bottom:0.25rem;">Forward secrecy</h3>
+      <p style="font-size:0.88rem;color:var(--dim);">
+        Epoch-based key rotation. Rotate your keys, old epochs are zeroized.
+        Past data becomes unrecoverable even if the current key leaks.
+      </p>
+    </div>
+
+    <div>
+      <h3 style="font-size:0.95rem;color:var(--bright);margin-bottom:0.25rem;">Opaque SQLite</h3>
+      <p style="font-size:0.88rem;color:var(--dim);">
+        Every table name, column name, and index is a BLAKE3 keyed hash.
+        The database is structurally meaningless without the schema key.
+      </p>
+    </div>
+
+    <div>
+      <h3 style="font-size:0.95rem;color:var(--bright);margin-bottom:0.25rem;">REST API</h3>
+      <p style="font-size:0.88rem;color:var(--dim);">
+        21 endpoints via Axum. Bearer token auth, CORS, rate limiting.
+        Volume ops, sharing, dead man's switch, system status. JSON in, JSON out.
+      </p>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- FOOTER -->
+<!-- ============================================================ -->
+<div class="wrap"><hr></div>
+<footer>
+<div class="wrap" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+  <span>MIT License. <a href="https://github.com/hedonistic-io/tgcryptfs">Source on GitHub.</a></span>
+  <span>
+    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CONTRIBUTING.md">Contribute</a> &nbsp;
+    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/docs/SECURITY.md">Security</a> &nbsp;
+    <a href="https://github.com/hedonistic-io/tgcryptfs/blob/main/CHANGELOG.md">Changelog</a>
+  </span>
+</div>
 </footer>
 
 </body>
