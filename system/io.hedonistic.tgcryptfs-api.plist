@@ -5,12 +5,12 @@
 
   Install:
     mkdir -p ~/Library/LaunchAgents
-    cp com.hedonistic-io.tgcryptfs-api.plist ~/Library/LaunchAgents/
-    launchctl load ~/Library/LaunchAgents/com.hedonistic-io.tgcryptfs-api.plist
+    cp io.hedonistic.tgcryptfs-api.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/io.hedonistic.tgcryptfs-api.plist
 
   Uninstall:
-    launchctl unload ~/Library/LaunchAgents/com.hedonistic-io.tgcryptfs-api.plist
-    rm ~/Library/LaunchAgents/com.hedonistic-io.tgcryptfs-api.plist
+    launchctl unload ~/Library/LaunchAgents/io.hedonistic.tgcryptfs-api.plist
+    rm ~/Library/LaunchAgents/io.hedonistic.tgcryptfs-api.plist
 
   Logs:
     tail -f ~/Library/Logs/tgcryptfs/api-stdout.log
@@ -19,7 +19,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.hedonistic-io.tgcryptfs-api</string>
+    <string>io.hedonistic.tgcryptfs-api</string>
 
     <key>ProgramArguments</key>
     <array>

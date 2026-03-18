@@ -212,8 +212,8 @@ cp system/tgcryptfs-deadman.service system/tgcryptfs-deadman.timer ~/.config/sys
 systemctl --user enable --now tgcryptfs-deadman.timer
 
 # macOS (launchd) -- API server as user agent
-cp system/com.hedonistic-io.tgcryptfs-api.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.hedonistic-io.tgcryptfs-api.plist
+cp system/io.hedonistic.tgcryptfs-api.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/io.hedonistic.tgcryptfs-api.plist
 ```
 
 ## Security
